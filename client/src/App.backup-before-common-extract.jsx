@@ -1,13 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { aiService } from "./services/aiService";
-import Badge from "./components/common/Badge";
-import GenrePill from "./components/common/GenrePill";
-import StarRating from "./components/common/StarRating";
-import ProgressBar from "./components/common/ProgressBar";
-import GlassCard from "./components/common/GlassCard";
-import Btn from "./components/common/Button";
-import SectionHeader from "./components/common/SectionHeader";
-import AmbientBg from "./components/background/AmbientBg";
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 const mockTitles = [
@@ -49,6 +41,123 @@ const typeColor = (type) => type === "Anime" ? "#e879f9" : type === "Manga" ? "#
 const typeGlow = (type) => type === "Anime" ? "rgba(232,121,249,0.4)" : type === "Manga" ? "rgba(56,189,248,0.4)" : "rgba(167,139,250,0.4)";
 
 // ─── Animated Orb Background ─────────────────────────────────────────────────
+function AmbientBg() {
+  return (
+    <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
+      <div className="orb orb1" />
+      <div className="orb orb2" />
+      <div className="orb orb3" />
+      <div className="noise-overlay" />
+    </div>
+  );
+}
+
+// ─── Reusable Components ──────────────────────────────────────────────────────
+function Badge({ children, color }) {
+  return (
+    <span style={{
+      display:"inline-block", padding:"2px 10px", borderRadius:99,
+      fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
+      background:`${color}20`, color, border:`1px solid ${color}50`,
+      boxShadow:`0 0 8px ${color}30`,
+    }}>{children}</span>
+  );
+}
+
+function GenrePill({ genre }) {
+  return (
+    <span style={{
+      display:"inline-block", padding:"2px 8px", borderRadius:4,
+      fontSize:10, color:"#9d8aac", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)"
+    }}>{genre}</span>
+  );
+}
+
+function StarRating({ value }) {
+  return (
+    <span style={{ color:"#fbbf24", fontSize:12, letterSpacing:1 }}>
+      {"★".repeat(Math.round(value / 2))}{"☆".repeat(5 - Math.round(value / 2))}
+      <span style={{ color:"#8a7898", marginLeft:5, fontSize:11 }}>{value}</span>
+    </span>
+  );
+}
+
+function ProgressBar({ pct, color = "#a855f7" }) {
+  const [width, setWidth] = useState(0);
+  useEffect(() => { setTimeout(() => setWidth(pct), 100); }, [pct]);
+  return (
+    <div style={{ height:3, background:"rgba(255,255,255,0.07)", borderRadius:99, overflow:"hidden" }}>
+      <div style={{ height:"100%", width:`${width}%`, background:`linear-gradient(90deg, ${color}cc, ${color})`, borderRadius:99, transition:"width 0.8s cubic-bezier(0.4,0,0.2,1)", boxShadow:`0 0 6px ${color}66` }} />
+    </div>
+  );
+}
+
+function GlassCard({ children, style = {}, onClick, hover = true, delay = 0 }) {
+  const [hov, setHov] = useState(false);
+  const [vis, setVis] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const t = setTimeout(() => setVis(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+  return (
+    <div
+      ref={ref}
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        background: hov && hover ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+        backdropFilter:"blur(24px)",
+        border:`1px solid ${hov && hover ? "rgba(168,85,247,0.45)" : "rgba(255,255,255,0.07)"}`,
+        borderRadius:18, transition:"all 0.3s cubic-bezier(0.4,0,0.2,1)",
+        boxShadow: hov && hover ? "0 8px 40px rgba(168,85,247,0.18), 0 0 0 1px rgba(168,85,247,0.1)" : "0 2px 12px rgba(0,0,0,0.3)",
+        cursor: onClick ? "pointer" : "default",
+        opacity: vis ? 1 : 0,
+        transform: vis ? "translateY(0)" : "translateY(12px)",
+        ...style
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Btn({ children, onClick, variant = "primary", small = false, disabled = false, style = {} }) {
+  const [hov, setHov] = useState(false);
+  const [active, setActive] = useState(false);
+  const base = {
+    display:"inline-flex", alignItems:"center", gap:6, border:"none",
+    cursor: disabled ? "not-allowed" : "pointer",
+    borderRadius:10, fontFamily:"inherit", fontWeight:700, letterSpacing:"0.04em",
+    transition:"all 0.2s cubic-bezier(0.4,0,0.2,1)",
+    opacity: disabled ? 0.45 : 1,
+    padding: small ? "5px 14px" : "9px 22px",
+    fontSize: small ? 11 : 13,
+    transform: active && !disabled ? "scale(0.96)" : hov && !disabled ? "translateY(-1px)" : "none",
+    ...style
+  };
+  const events = { onMouseEnter:()=>setHov(true), onMouseLeave:()=>{setHov(false);setActive(false);}, onMouseDown:()=>setActive(true), onMouseUp:()=>setActive(false) };
+  if (variant === "primary") return (
+    <button onClick={!disabled ? onClick : undefined} {...events}
+      style={{ ...base, background: hov ? "linear-gradient(135deg,#c026d3,#7c3aed)" : "linear-gradient(135deg,#a855f7,#6d28d9)", color:"#fff", boxShadow: hov ? "0 0 20px rgba(168,85,247,0.6), 0 4px 12px rgba(168,85,247,0.3)" : "0 0 12px rgba(168,85,247,0.35)" }}>
+      {children}
+    </button>
+  );
+  if (variant === "cyan") return (
+    <button onClick={!disabled ? onClick : undefined} {...events}
+      style={{ ...base, background: hov ? "rgba(6,182,212,0.22)" : "rgba(6,182,212,0.1)", color:"#22d3ee", border:"1px solid rgba(6,182,212,0.45)", boxShadow: hov ? "0 0 16px rgba(6,182,212,0.4)" : "none" }}>
+      {children}
+    </button>
+  );
+  return (
+    <button onClick={!disabled ? onClick : undefined} {...events}
+      style={{ ...base, background: hov ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.05)", color:"#c4b5d0", border:"1px solid rgba(255,255,255,0.11)" }}>
+      {children}
+    </button>
+  );
+}
+
 function TitleCard({ title, lib, onAdd, onView, delay = 0 }) {
   const inLib = lib.some(x => x.id === title.id);
   const [hov, setHov] = useState(false);
@@ -106,6 +215,31 @@ function TitleCard({ title, lib, onAdd, onView, delay = 0 }) {
     </div>
   );
 }
+
+function SectionHeader({ title, sub, action, delay = 0 }) {
+  const [vis, setVis] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setVis(true), delay); return () => clearTimeout(t); }, [delay]);
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:16, opacity: vis ? 1 : 0, transform: vis ? "translateX(0)" : "translateX(-8px)", transition:"all 0.4s ease" }}>
+      <div>
+        <h2 style={{ fontFamily:"'Rajdhani',sans-serif", fontWeight:800, fontSize:20, color:"#f0ebff", margin:"0 0 2px", display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ width:20, height:2, background:"linear-gradient(90deg,#a855f7,transparent)", display:"block" }} />
+          {title}
+        </h2>
+        {sub && <p style={{ fontSize:11, color:"#7a6b84", margin:0 }}>{sub}</p>}
+      </div>
+      {action && (
+        <button onClick={action.fn} style={{ background:"none", border:"none", color:"#a855f7", cursor:"pointer", fontSize:12, fontFamily:"inherit", fontWeight:700, letterSpacing:"0.05em", transition:"color 0.2s" }}
+          onMouseEnter={e => e.target.style.color = "#c084fc"}
+          onMouseLeave={e => e.target.style.color = "#a855f7"}>
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Pages ────────────────────────────────────────────────────────────────────
 
 function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
   const [search, setSearch] = useState("");
@@ -943,5 +1077,3 @@ export default function App() {
     </>
   );
 }
-
-

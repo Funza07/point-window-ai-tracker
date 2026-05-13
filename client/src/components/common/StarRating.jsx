@@ -1,2 +1,8 @@
-import React from "react";
-export default function StarRating({ value }) { const full=Math.round((value||0)/2); return <span style={{color:"#fbbf24",fontSize:12}}>{"?".repeat(full)}{"?".repeat(5-full)} <span style={{color:"#8a7898"}}>{value}</span></span>; }
+export default function StarRating({ value }) {
+  return (
+    <span style={{ color:"#fbbf24", fontSize:12, letterSpacing:1 }}>
+      {"★".repeat(Math.round(value / 2))}{"☆".repeat(5 - Math.round(value / 2))}
+      <span style={{ color:"#8a7898", marginLeft:5, fontSize:11 }}>{value}</span>
+    </span>
+  );
+}
