@@ -1,0 +1,11 @@
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import { chat, titleSummary, recommendSimilar, storySoFar } from "../controllers/ai.controller.js";
+const limiter=rateLimit({ windowMs: 60_000, max: 15, message: { message: "Too many AI requests" } });
+const r=Router();
+r.use(limiter);
+r.post("/chat", chat);
+r.post("/title-summary", titleSummary);
+r.post("/recommend-similar", recommendSimilar);
+r.post("/story-so-far", storySoFar);
+export default r;

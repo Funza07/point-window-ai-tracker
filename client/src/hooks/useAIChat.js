@@ -1,0 +1,3 @@
+import { useState } from "react";
+import { aiService } from "../services/aiService";
+export function useAIChat(){ const [messages,setMessages]=useState([]); const [loading,setLoading]=useState(false); const send = async (text, context={})=>{ const user={role:"user",content:text}; setMessages((m)=>[...m,user]); setLoading(true); try{ const r=await aiService.chat({ message:text, context }); setMessages((m)=>[...m,{role:"assistant",content:r.data?.reply||"No reply"}]); } catch { setMessages((m)=>[...m,{role:"assistant",content:"AI service unavailable in dev mode."}]); } finally{ setLoading(false);} }; return { messages, loading, send }; }

@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { getLibrary, createLibraryItem, patchLibraryItem, deleteLibraryItem, openSavedLink } from "../controllers/library.controller.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
+const r=Router();
+r.use(authMiddleware);
+r.get("/", getLibrary);
+r.post("/", createLibraryItem);
+r.patch("/:titleId", patchLibraryItem);
+r.delete("/:titleId", deleteLibraryItem);
+r.post("/:titleId/open-link", openSavedLink);
+export default r;

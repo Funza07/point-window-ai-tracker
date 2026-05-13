@@ -1,0 +1,6 @@
+.orb{position:absolute;border-radius:50%;filter:blur(80px);animation:orbFloat 12s ease-in-out infinite}
+.orb1{width:600px;height:600px;top:-20%;left:-10%;background:radial-gradient(circle,rgba(124,58,237,.18) 0%,transparent 65%)}
+.orb2{width:500px;height:500px;bottom:5%;right:-8%;background:radial-gradient(circle,rgba(6,182,212,.12) 0%,transparent 65%)}
+.orb3{width:400px;height:400px;top:45%;left:40%;background:radial-gradient(circle,rgba(236,72,153,.07) 0%,transparent 65%)}
+@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,15px) scale(.97)}}
+@keyframes pageEnter{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}

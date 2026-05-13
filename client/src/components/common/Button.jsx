@@ -1,0 +1,2 @@
+import React from "react";
+export default function Button({ children, variant="primary", ...props }) { const style=variant==="primary"?{background:"linear-gradient(135deg,#a855f7,#6d28d9)",color:"#fff"}:variant==="cyan"?{background:"rgba(6,182,212,.12)",color:"#22d3ee",border:"1px solid rgba(6,182,212,.45)"}:{background:"rgba(255,255,255,.05)",color:"#c4b5d0",border:"1px solid rgba(255,255,255,.11)"}; return <button {...props} style={{padding:"9px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",...style,...props.style}}>{children}</button>; }

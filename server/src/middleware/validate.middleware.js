@@ -1,0 +1,1 @@
+export const validate = (schema) => (req,_res,next) => { const parsed=schema.safeParse({ body:req.body, query:req.query, params:req.params }); if(!parsed.success){ const e=new Error(parsed.error.issues.map((i)=>i.message).join(", ")); e.statusCode=400; throw e; } next(); };
