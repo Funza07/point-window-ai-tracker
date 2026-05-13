@@ -9,11 +9,46 @@ import Btn from "./components/common/Button";
 import SectionHeader from "./components/common/SectionHeader";
 import AmbientBg from "./components/background/AmbientBg";
 import TitleCard from "./components/titles/TitleCard";
-import { mockTitles } from "./data/mockTitles";
-import { MOODS } from "./data/moods";
-import { NAV } from "./data/navItems";
-import { typeColor, typeGlow } from "./utils/titleUtils";
-import { getLib, saveLib, upsertItem, removeItem, getChat, saveChat } from "./utils/storageUtils";
+
+// ─── Mock Data ───────────────────────────────────────────────────────────────
+const mockTitles = [
+  { id:"solo-leveling", title:"Solo Leveling", alt:"Only I Level Up", type:"Manhwa", status:"Ongoing", total:200, rating:9.2, genres:["Action","Fantasy","Adventure"], synopsis:"A weak hunter rises to unmatched power through a mysterious leveling system after surviving a double dungeon.", cover:"https://picsum.photos/seed/solo/400/580", banner:"https://picsum.photos/seed/solo-banner/1200/420", popularity:99, year:2018, reason:"Perfect for overpowered MC fans — explosive pacing with stunning art." },
+  { id:"orv", title:"Omniscient Reader", alt:"Omniscient Reader's Viewpoint", type:"Manhwa", status:"Ongoing", total:230, rating:9.1, genres:["Action","Fantasy","Thriller"], synopsis:"A reader of an obscure web novel finds himself thrust into its world — and is the only one who knows how it ends.", cover:"https://picsum.photos/seed/orv/400/580", banner:"https://picsum.photos/seed/orv-b/1200/420", popularity:95, year:2020, reason:"Deep strategic plotting meets emotional gut-punches." },
+  { id:"aot", title:"Attack on Titan", alt:"Shingeki no Kyojin", type:"Anime", status:"Completed", total:94, rating:9.1, genres:["Action","Dark","Thriller"], synopsis:"Humanity battles giant titans behind massive walls while uncovering the terrifying truth of their world.", cover:"https://picsum.photos/seed/aot/400/580", banner:"https://picsum.photos/seed/aot-b/1200/420", popularity:97, year:2013, reason:"Masterclass in dark political narrative and shocking revelations." },
+  { id:"frieren", title:"Frieren", alt:"Frieren: Beyond Journey's End", type:"Anime", status:"Ongoing", total:28, rating:9.3, genres:["Fantasy","Adventure","Emotional"], synopsis:"An elf mage reflects on centuries of life and loss after the hero's journey has already ended.", cover:"https://picsum.photos/seed/frieren/400/580", banner:"https://picsum.photos/seed/frieren-b/1200/420", popularity:89, year:2023, reason:"Quiet, devastating emotional storytelling unlike anything else airing." },
+  { id:"jjk", title:"Jujutsu Kaisen", alt:"Jujutsu Kaisen", type:"Anime", status:"Ongoing", total:47, rating:8.7, genres:["Action","Supernatural","Thriller"], synopsis:"Students exorcise cursed spirits while facing existential threats from elite sorcerers.", cover:"https://picsum.photos/seed/jjk/400/580", banner:"https://picsum.photos/seed/jjk-b/1200/420", popularity:94, year:2020, reason:"Elite battle choreography and a genuinely menacing villain roster." },
+  { id:"csm", title:"Chainsaw Man", alt:"Chainsaw Man", type:"Manga", status:"Ongoing", total:180, rating:8.9, genres:["Action","Dark","Comedy"], synopsis:"A broke teen merges with a chainsaw devil and joins a government agency that hunts other devils.", cover:"https://picsum.photos/seed/csm/400/580", banner:"https://picsum.photos/seed/csm-b/1200/420", popularity:93, year:2018, reason:"Chaotic, unpredictable energy with emotional gut-punches every arc." },
+  { id:"dn", title:"Death Note", alt:"Death Note", type:"Anime", status:"Completed", total:37, rating:9.0, genres:["Thriller","Supernatural","Smart Plot"], synopsis:"A student discovers a supernatural notebook that can kill anyone whose name is written in it.", cover:"https://picsum.photos/seed/dn/400/580", banner:"https://picsum.photos/seed/dn-b/1200/420", popularity:92, year:2006, reason:"The definitive high-IQ cat-and-mouse psychological thriller." },
+  { id:"op", title:"One Piece", alt:"One Piece", type:"Anime", status:"Ongoing", total:1100, rating:9.0, genres:["Adventure","Comedy","Action"], synopsis:"Luffy and his crew sail the Grand Line in search of the ultimate treasure to claim the title of Pirate King.", cover:"https://picsum.photos/seed/op/400/580", banner:"https://picsum.photos/seed/op-b/1200/420", popularity:100, year:1999, reason:"Unmatched worldbuilding and the most rewarding long journey in anime." },
+  { id:"demon-slayer", title:"Demon Slayer", alt:"Kimetsu no Yaiba", type:"Anime", status:"Ongoing", total:63, rating:8.8, genres:["Action","Fantasy","Adventure"], synopsis:"A swordsman joins a corps of demon hunters after his family is slaughtered, seeking a cure for his sister.", cover:"https://picsum.photos/seed/ds/400/580", banner:"https://picsum.photos/seed/ds-b/1200/420", popularity:96, year:2019, reason:"Cinematic production values with genuine emotional stakes." },
+  { id:"tbate", title:"The Beginning After the End", alt:"TBATE", type:"Manhwa", status:"Ongoing", total:215, rating:8.9, genres:["Fantasy","Adventure","Drama"], synopsis:"A legendary king reincarnates into a new world and vows to forge a different, better life.", cover:"https://picsum.photos/seed/tbate/400/580", banner:"https://picsum.photos/seed/tbate-b/1200/420", popularity:87, year:2018, reason:"Reincarnation done right — real character growth and emotional arcs." },
+  { id:"blue-lock", title:"Blue Lock", alt:"Blue Lock", type:"Anime", status:"Ongoing", total:38, rating:8.4, genres:["Sports","Thriller","Action"], synopsis:"Strikers compete in a ruthless zero-sum program to become Japan's most selfish and deadly striker.", cover:"https://picsum.photos/seed/bluelock/400/580", banner:"https://picsum.photos/seed/bl-b/1200/420", popularity:88, year:2022, reason:"Sports anime reinvented as a high-stakes psychological battle." },
+  { id:"naruto", title:"Naruto", alt:"Naruto", type:"Anime", status:"Completed", total:220, rating:8.4, genres:["Action","Adventure","Supernatural"], synopsis:"A young ninja outcast dreams of becoming Hokage while mastering powerful forbidden jutsu.", cover:"https://picsum.photos/seed/naruto/400/580", banner:"https://picsum.photos/seed/naruto-b/1200/420", popularity:98, year:2002, reason:"The defining shonen — irreplaceable character bonds and iconic soundtrack." },
+  { id:"lookism", title:"Lookism", alt:"Lookism", type:"Manhwa", status:"Ongoing", total:530, rating:8.5, genres:["Drama","Action","School"], synopsis:"A bullied student wakes up able to switch between two bodies — one ugly, one beautiful.", cover:"https://picsum.photos/seed/lookism/400/580", banner:"https://picsum.photos/seed/lk-b/1200/420", popularity:85, year:2014, reason:"Raw social commentary wrapped in escalating underground fighting arcs." },
+  { id:"tog", title:"Tower of God", alt:"The Tower", type:"Manhwa", status:"Ongoing", total:620, rating:8.8, genres:["Action","Mystery","Adventure"], synopsis:"A boy climbs an infinite tower filled with deadly tests to find the girl who was his entire world.", cover:"https://picsum.photos/seed/tog/400/580", banner:"https://picsum.photos/seed/tog-b/1200/420", popularity:90, year:2010, reason:"Layered lore and a long-journey progression that rewards patience." },
+  { id:"wind-breaker", title:"Wind Breaker", alt:"Wind Breaker", type:"Manhwa", status:"Ongoing", total:510, rating:8.3, genres:["Sports","Drama","Comedy"], synopsis:"A gifted cyclist joins a street crew and discovers what it means to ride for something greater than himself.", cover:"https://picsum.photos/seed/wind/400/580", banner:"https://picsum.photos/seed/wb-b/1200/420", popularity:82, year:2013, reason:"Stylish competition arcs with genuine character chemistry." },
+];
+
+const MOODS = ["Action","Emotional","Dark","Funny","Smart Plot","OP MC","Short","Fantasy"];
+const NAV = [
+  { id:"dashboard", label:"Dashboard", icon:"⊞", emoji:"🏠" },
+  { id:"discover", label:"Discover", icon:"◈", emoji:"🔭" },
+  { id:"library", label:"My Library", icon:"◳", emoji:"📚" },
+  { id:"recommendations", label:"For You", icon:"✦", emoji:"✨" },
+  { id:"ai", label:"AI Assistant", icon:"◎", emoji:"🤖" },
+  { id:"settings", label:"Settings", icon:"⚙", emoji:"⚙️" },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const getLib = () => { try { return JSON.parse(localStorage.getItem("pw_lib") || "[]"); } catch { return []; } };
+const saveLib = (l) => localStorage.setItem("pw_lib", JSON.stringify(l));
+const upsertItem = (item, lib) => { const next = lib.filter(x => x.id !== item.id); next.unshift(item); saveLib(next); return next; };
+const removeItem = (id, lib) => { const n = lib.filter(x => x.id !== id); saveLib(n); return n; };
+const getChat = () => { try { return JSON.parse(localStorage.getItem("pw_chat") || "[]"); } catch { return []; } };
+const saveChat = (c) => localStorage.setItem("pw_chat", JSON.stringify(c));
+const typeColor = (type) => type === "Anime" ? "#e879f9" : type === "Manga" ? "#38bdf8" : "#a78bfa";
+const typeGlow = (type) => type === "Anime" ? "rgba(232,121,249,0.4)" : type === "Manga" ? "rgba(56,189,248,0.4)" : "rgba(167,139,250,0.4)";
+
 // ─── Animated Orb Background ─────────────────────────────────────────────────
 function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
   const [search, setSearch] = useState("");
@@ -61,7 +96,7 @@ function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
             </GlassCard>
           ) : (
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:14 }}>
-              {searched.slice(0,8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 50} />)}
+              {searched.slice(0,8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 50} typeColor={typeColor} typeGlow={typeGlow} />)}
             </div>
           )}
         </div>
@@ -135,7 +170,7 @@ function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
         <section>
           <SectionHeader title="Recommended For You" sub="AI-curated picks from your taste profile" action={{ label:"See all →", fn:() => setPage("recommendations") }} delay={200} />
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:14 }}>
-            {mockTitles.slice(4, 8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 60 + 250} />)}
+            {mockTitles.slice(4, 8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 60 + 250} typeColor={typeColor} typeGlow={typeGlow} />)}
           </div>
         </section>
       )}
@@ -186,7 +221,7 @@ function Discover({ lib, setLib, setPage, setDetailTitle }) {
       </div>
       <p style={{ fontSize:10, color:"#7a6b84", marginBottom:18, letterSpacing:"0.1em" }}>{list.length} TITLES FOUND</p>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:16 }}>
-        {list.map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 40} />)}
+        {list.map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 40} typeColor={typeColor} typeGlow={typeGlow} />)}
       </div>
     </div>
   );
@@ -292,7 +327,7 @@ function Recommendations({ lib, setLib, setPage, setDetailTitle }) {
               <span style={{ fontSize:9, color:"#7a6b84" }}>✦ AI</span>
             </div>
             <div style={{ borderRadius:"0 0 16px 16px", overflow:"hidden" }}>
-              <TitleCard title={t} lib={lib} onAdd={onAdd} onView={onView} />
+              <TitleCard title={t} lib={lib} onAdd={onAdd} onView={onView} typeColor={typeColor} typeGlow={typeGlow} />
             </div>
           </div>
         ))}
@@ -851,8 +886,6 @@ export default function App() {
     </>
   );
 }
-
-
 
 
 

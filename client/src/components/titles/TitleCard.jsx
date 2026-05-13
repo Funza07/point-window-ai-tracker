@@ -3,8 +3,9 @@ import Badge from "../common/Badge";
 import GenrePill from "../common/GenrePill";
 import StarRating from "../common/StarRating";
 import Btn from "../common/Button";
+import { typeColor, typeGlow } from "../../utils/titleUtils";
 
-export default function TitleCard({ title, lib, onAdd, onView, delay = 0, typeColor, typeGlow }) {
+export default function TitleCard({ title, lib, onAdd, onView, delay = 0 }) {
   const inLib = lib.some(x => x.id === title.id);
   const [hov, setHov] = useState(false);
   const [vis, setVis] = useState(false);
@@ -61,3 +62,7 @@ export default function TitleCard({ title, lib, onAdd, onView, delay = 0, typeCo
     </div>
   );
 }
+
+
+
+
