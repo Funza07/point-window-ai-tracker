@@ -1,13 +1,4 @@
-﻿import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { aiService } from "./services/aiService";
-import Badge from "./components/common/Badge";
-import GenrePill from "./components/common/GenrePill";
-import StarRating from "./components/common/StarRating";
-import ProgressBar from "./components/common/ProgressBar";
-import GlassCard from "./components/common/GlassCard";
-import Btn from "./components/common/Button";
-import SectionHeader from "./components/common/SectionHeader";
-import TitleCard from "./components/titles/TitleCard";
+﻿import { useState } from "react";
 import AppShell from "./layouts/AppShell";
 import Settings from "./pages/Settings";
 import Recommendations from "./pages/Recommendations";
@@ -16,10 +7,8 @@ import Library from "./pages/Library";
 import Dashboard from "./pages/Dashboard";
 import AIAssistant from "./pages/AIAssistant";
 import TitleDetail from "./pages/TitleDetail";
-import { mockTitles } from "./data/mockTitles";
 import { NAV } from "./data/navItems";
-import { typeColor, typeGlow } from "./utils/titleUtils";
-import { getLib, saveLib, upsertItem, removeItem, getChat, saveChat } from "./utils/storageUtils";
+import { getLib } from "./utils/storageUtils";
 // ?? Animated Orb Background ???????????????????????????????????????????????????????????????????????????????????
 // â”€â”€â”€ Main App Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function App() {
@@ -193,6 +182,9 @@ export default function App() {
     </>
   );
 }
+
+
+
 
 
 
