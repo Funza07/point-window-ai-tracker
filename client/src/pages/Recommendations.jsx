@@ -6,10 +6,10 @@ import GlassCard from "../components/common/GlassCard";
 import SectionHeader from "../components/common/SectionHeader";
 import { upsertItem } from "../utils/storageUtils";
 
-export default function Recommendations({ lib, setLib, setPage, setDetailTitle }) {
+export default function Recommendations({ lib, setLib, setPage, setDetailTitle, onAdd }) {
   const [mood, setMood] = useState("Action");
   const picks = useMemo(() => mockTitles.filter(t => t.genres.join(" ").toLowerCase().includes(mood.toLowerCase()) || mood === "OP MC").slice(0,8), [mood]);
-  const onAdd = (t) => setLib(upsertItem({ id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" }, lib));
+  const onAddLocal = (t) => setLib(upsertItem({ id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" }, lib));
   const onView = (t) => { setDetailTitle(t); setPage("detail"); };
   const getMatch = (t) => Math.min(99, 70 + Math.floor((t.rating - 7) * 8) + Math.floor(Math.random() * 8));
 
@@ -36,7 +36,7 @@ export default function Recommendations({ lib, setLib, setPage, setDetailTitle }
               <span style={{ fontSize:9, color:"#7a6b84" }}>✦ AI</span>
             </div>
             <div style={{ borderRadius:"0 0 16px 16px", overflow:"hidden" }}>
-              <TitleCard title={t} lib={lib} onAdd={onAdd} onView={onView} />
+              <TitleCard title={t} lib={lib} onAdd={onAdd ? (x) => onAdd({ id:x.id, status:"Watching", progress:0, score:"", notes:"", link:"" }) : onAddLocal} onView={onView} />
             </div>
           </div>
         ))}

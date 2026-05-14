@@ -8,25 +8,97 @@ export const mockTitles = [
 ];
 
 const libByUser = new Map();
+const VALID_STATUS = new Set(["Planning", "Watching", "Reading", "Completed", "Dropped"]);
+
+const normalizeScore = (value) => {
+  if (value === "" || value === null || value === undefined) return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  if (n < 0 || n > 10) return "";
+  return n;
+};
+
+const normalizeProgress = (value) => {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+};
 
 export const libraryStore = {
   get: (userId) => libByUser.get(userId) || [],
   upsert: (userId, item) => {
+    const now = new Date().toISOString();
     const list = libByUser.get(userId) || [];
-    const next = [item, ...list.filter((x) => x.id !== item.id)];
+    const prev = list.find((x) => x.id === item.id);
+    const nextItem = {
+      ...prev,
+      ...item,
+      id: item.id,
+      titleId: item.id,
+      created_at: prev?.created_at || now,
+      updated_at: now,
+      link: item.saved_link || item.link || "",
+      saved_link: item.saved_link || item.link || "",
+      last_opened_at: prev?.last_opened_at || null,
+    };
+    const next = [nextItem, ...list.filter((x) => x.id !== item.id)];
     libByUser.set(userId, next);
     return next;
   },
   patch: (userId, titleId, patch) => {
-    const list = (libByUser.get(userId) || []).map((x) => (x.id === titleId ? { ...x, ...patch } : x));
-    libByUser.set(userId, list);
-    return list;
+    const list = libByUser.get(userId) || [];
+    const now = new Date().toISOString();
+    const normalizedId = String(titleId);
+    const next = list.map((x) =>
+      x.id === normalizedId
+        ? {
+            ...x,
+            ...patch,
+            id: normalizedId,
+            titleId: normalizedId,
+            updated_at: now,
+            link: patch.saved_link ?? patch.link ?? x.link ?? "",
+            saved_link: patch.saved_link ?? patch.link ?? x.saved_link ?? "",
+          }
+        : x,
+    );
+    if (!next.some((x) => x.id === normalizedId)) {
+      const base = sanitizeLibraryPayload({ id: normalizedId });
+      next.unshift({
+        ...base,
+        id: normalizedId,
+        titleId: normalizedId,
+        created_at: now,
+        updated_at: now,
+        last_opened_at: null,
+      });
+    }
+    libByUser.set(userId, next);
+    return next;
   },
   remove: (userId, titleId) => libByUser.set(userId, (libByUser.get(userId) || []).filter((x) => x.id !== titleId)),
+  markOpened: (userId, titleId) => {
+    const now = new Date().toISOString();
+    const list = (libByUser.get(userId) || []).map((x) => (x.id === titleId ? { ...x, last_opened_at: now, updated_at: now } : x));
+    libByUser.set(userId, list);
+    return { list, openedAt: now, item: list.find((x) => x.id === titleId) || null };
+  },
 };
 
-export const sanitizeLibraryPayload = (payload = {}) => ({
-  ...payload,
-  notes: sanitizeText(payload.notes || ""),
-  saved_link: sanitizeLink(payload.saved_link || payload.link || ""),
-});
+export const sanitizeLibraryPayload = (payload = {}) => {
+  const id = String(payload.id ?? payload.titleId ?? "").trim();
+  const status = VALID_STATUS.has(payload.status) ? payload.status : "Planning";
+  const notes = sanitizeText(payload.notes || "");
+  const saved_link = sanitizeLink(payload.saved_link || payload.link || "");
+  return {
+    ...payload,
+    id,
+    titleId: id,
+    status,
+    progress: normalizeProgress(payload.progress),
+    score: normalizeScore(payload.score),
+    notes,
+    link: saved_link,
+    saved_link,
+  };
+};

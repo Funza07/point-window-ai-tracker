@@ -7,7 +7,7 @@ import Btn from "../components/common/Button";
 import { typeColor } from "../utils/titleUtils";
 import { removeItem } from "../utils/storageUtils";
 
-export default function Library({ lib, setLib, setPage, setDetailTitle }) {
+export default function Library({ lib, setLib, setPage, setDetailTitle, onRemove, onOpenLink }) {
   const [tab, setTab] = useState("All");
   const TABS = ["All","Anime","Manga","Manhwa","Watching","Reading","Completed","Planned","Dropped"];
   const rows = lib.map(item => ({ item, title: mockTitles.find(t => t.id === item.id) })).filter(x => x.title);
@@ -64,8 +64,8 @@ export default function Library({ lib, setLib, setPage, setDetailTitle }) {
                   {item.score && <p style={{ fontSize:11, color:"#fbbf24", margin:"4px 0 0" }}>★ {item.score}/10</p>}
                   <div style={{ display:"flex", gap:6, marginTop:8, flexWrap:"wrap" }}>
                     <Btn small onClick={() => onView(title)}>Details</Btn>
-                    <Btn small variant="ghost" onClick={() => setLib(removeItem(title.id, lib))} style={{ color:"#f87171" }}>Remove</Btn>
-                    {item.link && <Btn small variant="cyan" onClick={() => window.open(item.link, "_blank")}>▶</Btn>}
+                    <Btn small variant="ghost" onClick={() => onRemove ? onRemove(title.id) : setLib(removeItem(title.id, lib))} style={{ color:"#f87171" }}>Remove</Btn>
+                    {item.link && <Btn small variant="cyan" onClick={async () => { if (onOpenLink) await onOpenLink(title.id); window.open(item.link, "_blank"); }}>▶</Btn>}
                   </div>
                 </div>
               </GlassCard>

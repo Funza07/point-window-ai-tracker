@@ -9,14 +9,18 @@ import TitleCard from "../components/titles/TitleCard";
 import { typeColor } from "../utils/titleUtils";
 import { upsertItem } from "../utils/storageUtils";
 
-export default function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
+export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd, onOpenLink }) {
   const [search, setSearch] = useState("");
   const [searchFocus, setSearchFocus] = useState(false);
   const trending = [...mockTitles].sort((a, b) => b.popularity - a.popularity).slice(0, 5);
   const hero = mockTitles[3];
   const continueItems = lib.slice(0, 4).map(item => ({ item, title: mockTitles.find(t => t.id === item.id) })).filter(x => x.title);
   const searched = search ? mockTitles.filter(t => `${t.title} ${t.alt} ${t.type} ${t.genres.join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
-  const onAdd = (t) => setLib(upsertItem({ id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" }, lib));
+  const handleAdd = (t) => {
+    const item = { id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" };
+    if (onAdd) return onAdd(item);
+    setLib(upsertItem(item, lib));
+  };
   const onView = (t) => { setDetailTitle(t); setPage("detail"); };
 
   return (
@@ -55,7 +59,7 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
             </GlassCard>
           ) : (
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:14 }}>
-              {searched.slice(0,8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 50} />)}
+              {searched.slice(0,8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={handleAdd} onView={onView} delay={i * 50} />)}
             </div>
           )}
         </div>
@@ -99,7 +103,7 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
                   <ProgressBar pct={title.total ? Math.round((item.progress / title.total) * 100) : 0} color={typeColor(title.type)} />
                   <div style={{ marginTop:8, display:"flex", gap:6 }}>
                     <Btn small onClick={() => onView(title)}>Continue</Btn>
-                    {item.link && <Btn small variant="cyan" onClick={() => window.open(item.link, "_blank")}>▶ Link</Btn>}
+                    {item.link && <Btn small variant="cyan" onClick={async () => { if (onOpenLink) await onOpenLink(title.id); window.open(item.link, "_blank"); }}>▶ Link</Btn>}
                   </div>
                 </div>
               </GlassCard>
@@ -129,7 +133,7 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle }) {
         <section>
           <SectionHeader title="Recommended For You" sub="AI-curated picks from your taste profile" action={{ label:"See all →", fn:() => setPage("recommendations") }} delay={200} />
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:14 }}>
-            {mockTitles.slice(4, 8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 60 + 250} />)}
+            {mockTitles.slice(4, 8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={handleAdd} onView={onView} delay={i * 60 + 250} />)}
           </div>
         </section>
       )}

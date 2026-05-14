@@ -11,7 +11,7 @@ import TitleCard from "../components/titles/TitleCard";
 import { typeColor, typeGlow } from "../utils/titleUtils";
 import { upsertItem } from "../utils/storageUtils";
 
-export default function TitleDetail({ title, lib, setLib, setPage }) {
+export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd, onOpenLink }) {
   const [form, setForm] = useState(() => {
     const item = lib.find(x => x.id === title.id);
     return item || { status:"Planning", progress:0, score:"", notes:"", link:"" };
@@ -22,14 +22,20 @@ export default function TitleDetail({ title, lib, setLib, setPage }) {
   const similar = mockTitles.filter(t => t.id !== title.id && (t.type === title.type || t.genres.some(g => title.genres.includes(g)))).slice(0, 6);
 
   const save = () => {
-    setLib(upsertItem({ id:title.id, ...form }, lib));
+    const payload = { id:title.id, ...form };
+    if (onSave) onSave(title.id, payload);
+    else if (onAdd) onAdd(payload);
+    else setLib(upsertItem(payload, lib));
     setSaved("âœ“ Saved to library!");
     setTimeout(() => setSaved(""), 2500);
   };
   const complete = () => {
     const updated = { ...form, status:"Completed", progress:title.total };
     setForm(updated);
-    setLib(upsertItem({ id:title.id, ...updated }, lib));
+    const payload = { id:title.id, ...updated };
+    if (onSave) onSave(title.id, payload);
+    else if (onAdd) onAdd(payload);
+    else setLib(upsertItem(payload, lib));
     setSaved("âœ“ Marked as Completed!");
     setTimeout(() => setSaved(""), 2500);
   };
@@ -96,7 +102,7 @@ export default function TitleDetail({ title, lib, setLib, setPage }) {
         <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
           <Btn onClick={save}>Save Progress</Btn>
           <Btn variant="ghost" onClick={complete}>Mark Completed</Btn>
-          {form.link && <Btn variant="cyan" onClick={() => window.open(form.link, "_blank")}>â–¶ Open Link</Btn>}
+          {form.link && <Btn variant="cyan" onClick={async () => { if (onOpenLink) await onOpenLink(title.id); window.open(form.link, "_blank"); }}>â–¶ Open Link</Btn>}
         </div>
       </GlassCard>
 

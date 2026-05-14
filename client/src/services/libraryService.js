@@ -1,20 +1,65 @@
 import { apiClient } from "./apiClient";
-const KEY = "pw_lib";
-const getLocal = () => JSON.parse(localStorage.getItem(KEY) || "[]");
-const setLocal = (v) => localStorage.setItem(KEY, JSON.stringify(v));
+import { getLib, saveLib, upsertItem, removeItem } from "../utils/storageUtils";
+
+const normalizeListResponse = (res) => (Array.isArray(res?.data) ? res.data : []);
 
 export const libraryService = {
-  async list() { try { return await apiClient.request("/library"); } catch { return { data: getLocal() }; } },
+  async list() {
+    try {
+      const res = await apiClient.request("/library");
+      const data = normalizeListResponse(res);
+      saveLib(data);
+      return { success: true, data, source: "backend" };
+    } catch {
+      return { success: true, data: getLib(), source: "local" };
+    }
+  },
   async upsert(item) {
-    try { return await apiClient.request("/library", { method: "POST", body: JSON.stringify(item) }); }
-    catch { const list=[item,...getLocal().filter((x)=>x.id!==item.id)]; setLocal(list); return { data: list }; }
+    try {
+      const res = await apiClient.request("/library", { method: "POST", body: JSON.stringify(item) });
+      const data = normalizeListResponse(res);
+      saveLib(data);
+      return { success: true, data, source: "backend" };
+    } catch {
+      const data = upsertItem(item, getLib());
+      return { success: true, data, source: "local" };
+    }
   },
   async update(titleId, patch) {
-    try { return await apiClient.request(`/library/${titleId}`, { method:"PATCH", body: JSON.stringify(patch) }); }
-    catch { const list=getLocal().map((x)=>x.id===titleId?{...x,...patch}:x); setLocal(list); return { data: list }; }
+    try {
+      const res = await apiClient.request(`/library/${titleId}`, { method: "PATCH", body: JSON.stringify(patch) });
+      const data = normalizeListResponse(res);
+      saveLib(data);
+      return { success: true, data, source: "backend" };
+    } catch {
+      const data = upsertItem({ id: titleId, ...patch }, getLib());
+      return { success: true, data, source: "local" };
+    }
   },
   async remove(titleId) {
-    try { return await apiClient.request(`/library/${titleId}`, { method:"DELETE" }); }
-    catch { const list=getLocal().filter((x)=>x.id!==titleId); setLocal(list); return { data: list }; }
+    try {
+      const res = await apiClient.request(`/library/${titleId}`, { method: "DELETE" });
+      const data = normalizeListResponse(res);
+      saveLib(data);
+      return { success: true, data, source: "backend" };
+    } catch {
+      const data = removeItem(titleId, getLib());
+      return { success: true, data, source: "local" };
+    }
+  },
+  async openLink(titleId) {
+    try {
+      const res = await apiClient.request(`/library/${titleId}/open-link`, { method: "POST" });
+      const current = getLib();
+      const openedAt = res?.data?.openedAt || new Date().toISOString();
+      const data = current.map((x) => (x.id === titleId ? { ...x, last_opened_at: openedAt } : x));
+      saveLib(data);
+      return { success: true, data, source: "backend" };
+    } catch {
+      const openedAt = new Date().toISOString();
+      const data = getLib().map((x) => (x.id === titleId ? { ...x, last_opened_at: openedAt } : x));
+      saveLib(data);
+      return { success: true, data, source: "local" };
+    }
   },
 };

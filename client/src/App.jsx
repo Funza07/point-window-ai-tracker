@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import AppShell from "./layouts/AppShell";
 import Settings from "./pages/Settings";
 import Recommendations from "./pages/Recommendations";
@@ -9,6 +9,7 @@ import AIAssistant from "./pages/AIAssistant";
 import TitleDetail from "./pages/TitleDetail";
 import { NAV } from "./data/navItems";
 import { getLib } from "./utils/storageUtils";
+import { libraryService } from "./services/libraryService";
 // ?? Animated Orb Background ???????????????????????????????????????????????????????????????????????????????????
 // â”€â”€â”€ Main App Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function App() {
@@ -19,14 +20,43 @@ export default function App() {
 
   const navigate = (p) => { setPage(p); setSidebarOpen(false); };
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const res = await libraryService.list();
+      if (mounted && Array.isArray(res.data)) setLib(res.data);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const addToLibrary = async (item) => {
+    const res = await libraryService.upsert(item);
+    if (Array.isArray(res.data)) setLib(res.data);
+  };
+
+  const updateLibraryItem = async (titleId, patch) => {
+    const res = await libraryService.update(titleId, patch);
+    if (Array.isArray(res.data)) setLib(res.data);
+  };
+
+  const removeFromLibrary = async (titleId) => {
+    const res = await libraryService.remove(titleId);
+    if (Array.isArray(res.data)) setLib(res.data);
+  };
+
+  const openLibraryLink = async (titleId) => {
+    const res = await libraryService.openLink(titleId);
+    if (Array.isArray(res.data)) setLib(res.data);
+  };
+
   const renderPage = () => {
-    if (page === "detail" && detailTitle) return <TitleDetail title={detailTitle} lib={lib} setLib={setLib} setPage={setPage} />;
-    if (page === "discover") return <Discover lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} />;
-    if (page === "library") return <Library lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} />;
-    if (page === "recommendations") return <Recommendations lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} />;
+    if (page === "detail" && detailTitle) return <TitleDetail title={detailTitle} lib={lib} setLib={setLib} setPage={setPage} onSave={updateLibraryItem} onAdd={addToLibrary} onOpenLink={openLibraryLink} />;
+    if (page === "discover") return <Discover lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} />;
+    if (page === "library") return <Library lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onRemove={removeFromLibrary} onOpenLink={openLibraryLink} />;
+    if (page === "recommendations") return <Recommendations lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} />;
     if (page === "ai") return <AIAssistant lib={lib} />;
     if (page === "settings") return <Settings />;
-    return <Dashboard lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} />;
+    return <Dashboard lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} onOpenLink={openLibraryLink} />;
   };
 
   return (
@@ -182,6 +212,8 @@ export default function App() {
     </>
   );
 }
+
+
 
 
 

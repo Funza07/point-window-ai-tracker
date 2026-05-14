@@ -3,7 +3,7 @@ import { mockTitles } from "../data/mockTitles";
 import TitleCard from "../components/titles/TitleCard";
 import { upsertItem } from "../utils/storageUtils";
 
-export default function Discover({ lib, setLib, setPage, setDetailTitle }) {
+export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }) {
   const [search, setSearch] = useState("");
   const [searchFocus, setSearchFocus] = useState(false);
   const [filter, setFilter] = useState("All");
@@ -20,7 +20,7 @@ export default function Discover({ lib, setLib, setPage, setDetailTitle }) {
     return out;
   }, [search, filter, sort]);
 
-  const onAdd = (t) => setLib(upsertItem({ id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" }, lib));
+  const onAddLocal = (t) => setLib(upsertItem({ id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" }, lib));
   const onView = (t) => { setDetailTitle(t); setPage("detail"); };
 
   return (
@@ -46,7 +46,7 @@ export default function Discover({ lib, setLib, setPage, setDetailTitle }) {
       </div>
       <p style={{ fontSize:10, color:"#7a6b84", marginBottom:18, letterSpacing:"0.1em" }}>{list.length} TITLES FOUND</p>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:16 }}>
-        {list.map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd} onView={onView} delay={i * 40} />)}
+        {list.map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd ? (x) => onAdd({ id:x.id, status:"Watching", progress:0, score:"", notes:"", link:"" }) : onAddLocal} onView={onView} delay={i * 40} />)}
       </div>
     </div>
   );
