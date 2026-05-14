@@ -7,6 +7,7 @@ import titlesRoutes from "./routes/titles.routes.js";
 import libraryRoutes from "./routes/library.routes.js";
 import recommendationsRoutes from "./routes/recommendations.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
+import debugRoutes from "./routes/debug.routes.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -28,6 +29,7 @@ app.use("/api/titles", titlesRoutes);
 app.use("/api/library", libraryRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/debug", debugRoutes);
 app.use(errorMiddleware);
 
 export default app;

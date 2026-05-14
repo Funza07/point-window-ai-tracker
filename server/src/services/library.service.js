@@ -1,5 +1,5 @@
 import { sanitizeLink, sanitizeText } from "../utils/sanitize.js";
-import { db, isDbAvailable } from "../config/db.js";
+import { db, isDbAvailable, testDbConnection } from "../config/db.js";
 
 const libByUser = new Map();
 const VALID_STATUS = new Set(["Planning", "Watching", "Reading", "Completed", "Dropped"]);
@@ -208,4 +208,12 @@ export const openLibraryLink = async (userId, titleId) => {
     warn("MySQL open-link failed, falling back to in-memory", err);
     return memoryStore.openLink(userId, titleId);
   }
+};
+
+export const getLibrarySourceStatus = async () => {
+  const status = await testDbConnection();
+  return {
+    source: status.dbConnected ? "mysql" : "memory",
+    usingFallback: !status.dbConnected,
+  };
 };
