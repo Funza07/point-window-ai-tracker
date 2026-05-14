@@ -1,23 +1,30 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { mockTitles } from "../data/mockTitles";
 import TitleCard from "../components/titles/TitleCard";
 import { upsertItem } from "../utils/storageUtils";
+import { titleService } from "../services/titleService";
 
 export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }) {
   const [search, setSearch] = useState("");
   const [searchFocus, setSearchFocus] = useState(false);
   const [filter, setFilter] = useState("All");
   const [sort, setSort] = useState("Popularity");
+  const [list, setList] = useState(mockTitles);
   const FILTERS = ["All","Anime","Manga","Manhwa","Ongoing","Completed"];
 
-  const list = useMemo(() => {
-    let out = mockTitles.filter(t => `${t.title} ${t.alt} ${t.type} ${t.genres.join(" ")}`.toLowerCase().includes(search.toLowerCase()));
-    if (["Anime","Manga","Manhwa"].includes(filter)) out = out.filter(t => t.type === filter);
-    if (["Ongoing","Completed"].includes(filter)) out = out.filter(t => t.status === filter);
-    if (sort === "Popularity") out = [...out].sort((a,b) => b.popularity - a.popularity);
-    if (sort === "Rating") out = [...out].sort((a,b) => b.rating - a.rating);
-    if (sort === "Latest") out = [...out].sort((a,b) => b.year - a.year);
-    return out;
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const params = {
+        q: search,
+        type: ["Anime","Manga","Manhwa"].includes(filter) ? filter : "",
+        status: ["Ongoing","Completed"].includes(filter) ? filter : "",
+        sort,
+      };
+      const res = await titleService.search(params);
+      if (mounted) setList(Array.isArray(res.data) ? res.data : mockTitles);
+    })();
+    return () => { mounted = false; };
   }, [search, filter, sort]);
 
   const onAddLocal = (t) => setLib(upsertItem({ id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" }, lib));

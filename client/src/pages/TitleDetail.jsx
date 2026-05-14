@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { mockTitles } from "../data/mockTitles";
 import GlassCard from "../components/common/GlassCard";
 import Badge from "../components/common/Badge";
@@ -10,6 +10,7 @@ import SectionHeader from "../components/common/SectionHeader";
 import TitleCard from "../components/titles/TitleCard";
 import { typeColor, typeGlow } from "../utils/titleUtils";
 import { upsertItem } from "../utils/storageUtils";
+import { titleService } from "../services/titleService";
 
 export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd, onOpenLink }) {
   const [form, setForm] = useState(() => {
@@ -19,7 +20,8 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
   const [saved, setSaved] = useState("");
   const c = typeColor(title.type);
   const pct = title.total ? Math.round(((form.progress || 0) / title.total) * 100) : 0;
-  const similar = mockTitles.filter(t => t.id !== title.id && (t.type === title.type || t.genres.some(g => title.genres.includes(g)))).slice(0, 6);
+  const localSimilar = mockTitles.filter(t => t.id !== title.id && (t.type === title.type || t.genres.some(g => title.genres.includes(g)))).slice(0, 6);
+  const [similar, setSimilar] = useState(localSimilar);
 
   const save = () => {
     const payload = { id:title.id, ...form };
@@ -39,6 +41,16 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
     setSaved("âœ“ Marked as Completed!");
     setTimeout(() => setSaved(""), 2500);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const res = await titleService.similar(title.id);
+      if (mounted && Array.isArray(res.data) && res.data.length) setSimilar(res.data);
+      else if (mounted) setSimilar(localSimilar);
+    })();
+    return () => { mounted = false; };
+  }, [title.id]);
 
   return (
     <div className="page-enter" style={{ display:"flex", flexDirection:"column", gap:22 }}>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { mockTitles } from "../data/mockTitles";
 import GlassCard from "../components/common/GlassCard";
 import Badge from "../components/common/Badge";
@@ -8,20 +8,36 @@ import SectionHeader from "../components/common/SectionHeader";
 import TitleCard from "../components/titles/TitleCard";
 import { typeColor } from "../utils/titleUtils";
 import { upsertItem } from "../utils/storageUtils";
+import { titleService } from "../services/titleService";
 
 export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd, onOpenLink }) {
   const [search, setSearch] = useState("");
   const [searchFocus, setSearchFocus] = useState(false);
-  const trending = [...mockTitles].sort((a, b) => b.popularity - a.popularity).slice(0, 5);
-  const hero = mockTitles[3];
+  const [trending, setTrending] = useState([...mockTitles].sort((a, b) => b.popularity - a.popularity).slice(0, 5));
+  const [catalog, setCatalog] = useState(mockTitles);
+  const hero = catalog[3] || mockTitles[3];
   const continueItems = lib.slice(0, 4).map(item => ({ item, title: mockTitles.find(t => t.id === item.id) })).filter(x => x.title);
-  const searched = search ? mockTitles.filter(t => `${t.title} ${t.alt} ${t.type} ${t.genres.join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
+  const searched = search ? catalog.filter(t => `${t.title} ${t.alt} ${t.type} ${t.genres.join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
   const handleAdd = (t) => {
     const item = { id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" };
     if (onAdd) return onAdd(item);
     setLib(upsertItem(item, lib));
   };
   const onView = (t) => { setDetailTitle(t); setPage("detail"); };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const [trendRes, catalogRes] = await Promise.all([
+        titleService.trending(),
+        titleService.search({ sort: "Popularity" }),
+      ]);
+      if (!mounted) return;
+      if (Array.isArray(trendRes.data) && trendRes.data.length) setTrending(trendRes.data.slice(0, 5));
+      if (Array.isArray(catalogRes.data) && catalogRes.data.length) setCatalog(catalogRes.data);
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="page-enter" style={{ display:"flex", flexDirection:"column", gap:32 }}>
@@ -133,7 +149,7 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd,
         <section>
           <SectionHeader title="Recommended For You" sub="AI-curated picks from your taste profile" action={{ label:"See all →", fn:() => setPage("recommendations") }} delay={200} />
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:14 }}>
-            {mockTitles.slice(4, 8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={handleAdd} onView={onView} delay={i * 60 + 250} />)}
+            {catalog.slice(4, 8).map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={handleAdd} onView={onView} delay={i * 60 + 250} />)}
           </div>
         </section>
       )}
