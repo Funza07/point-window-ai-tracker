@@ -66,3 +66,19 @@ Health checks:
 `npm run build -w client`
 
 3. Upload the contents of `client/dist` to Hostinger `public_html` (or a subfolder).
+
+## Using MySQL persistence
+
+The library API supports MySQL persistence with automatic in-memory fallback.
+
+1. Create a MySQL database (for example `point_window`).
+2. Import schema:
+`server/src/database/schema.sql`
+3. Set server env vars:
+- `DB_HOST`
+- `DB_PORT` (default `3306`)
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+
+If DB env vars are missing (or MySQL is unavailable), the server continues using in-memory storage so the API remains functional.
