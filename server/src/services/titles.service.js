@@ -79,7 +79,15 @@ export const searchTitlesService = async ({ q = "", type = "", status = "", genr
   const mockData = searchMockTitles(input);
   const nq = normalize(q);
 
-  if (!hasSearchIntent(input)) return { data: mockData, warning: null };
+  if (!hasSearchIntent(input)) {
+    try {
+      const anilistData = await searchAniListTitles({ q: "", type, status, genre, sort, page: 1, perPage: 16 });
+      if (anilistData.length > 0) return { data: anilistData, warning: null };
+    } catch {
+      // fallback below
+    }
+    return { data: mockData, warning: "Using local catalogue fallback." };
+  }
 
   try {
     const anilistData = await searchAniListTitles({ q, type, status, genre, sort, page: 1, perPage: 16 });
@@ -100,11 +108,19 @@ export const searchTitlesService = async ({ q = "", type = "", status = "", genr
   }
 };
 
-export const trendingTitlesService = (limit = 10) =>
-  [...mockTitles]
+export const trendingTitlesService = async (limit = 10) => {
+  const safeLimit = Math.max(0, Math.floor(toNumber(limit, 10)));
+  try {
+    const anilistData = await searchAniListTitles({ q: "", sort: "Popularity", page: 1, perPage: Math.max(12, safeLimit) });
+    if (anilistData.length > 0) return anilistData.slice(0, safeLimit);
+  } catch {
+    // fallback below
+  }
+  return [...mockTitles]
     .map(normalizeTitleShape)
     .sort((a, b) => toNumber(b.popularity, 0) - toNumber(a.popularity, 0))
-    .slice(0, Math.max(0, Math.floor(toNumber(limit, 10))));
+    .slice(0, safeLimit);
+};
 
 export const getTitleByIdService = async (id) => {
   const normalizedId = toText(id);

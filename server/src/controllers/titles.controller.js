@@ -17,7 +17,7 @@ export const getTitle = async (req, res) => {
 
 export const trendingTitles = async (req, res) => {
   const limit = Number(req.query.limit || 10);
-  const data = trendingTitlesService(Number.isFinite(limit) ? limit : 10);
+  const data = await trendingTitlesService(Number.isFinite(limit) ? limit : 10);
   res.json({ success: true, data });
 };
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+ï»¿import { useEffect, useState } from "react";
 import { mockTitles } from "../data/mockTitles";
 import GlassCard from "../components/common/GlassCard";
 import Badge from "../components/common/Badge";
@@ -110,7 +110,7 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
           <img src={resolvedTitle.cover} alt={resolvedTitle.title} style={{ width: 106, height: 148, objectFit: "cover", borderRadius: 14, border: `2px solid ${c}60`, flexShrink: 0, boxShadow: `0 12px 32px ${typeGlow(resolvedTitle.type)}` }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 900, fontSize: 32, color: "#f0ebff", margin: "0 0 4px", lineHeight: 1.05 }}>{resolvedTitle.title}</h1>
-            <p style={{ fontSize: 12, color: "#7a6b84", margin: "0 0 10px" }}>{resolvedTitle.alt} · {resolvedTitle.year}</p>
+            <p style={{ fontSize: 12, color: "#7a6b84", margin: "0 0 10px" }}>{resolvedTitle.alt} Â· {resolvedTitle.year}</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
               <Badge color={c}>{resolvedTitle.type}</Badge>
               <Badge color={resolvedTitle.status === "Ongoing" ? "#4ade80" : "#8a7898"}>{resolvedTitle.status}</Badge>
@@ -160,7 +160,7 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
           <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Track thoughts, key moments, reminders..." style={{ padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#f0ebff", fontSize: 13, fontFamily: "inherit", minHeight: 72, resize: "vertical", outline: "none" }} />
         </label>
         <ProgressBar pct={pct} color={c} />
-        <p style={{ fontSize: 11, color: "#7a6b84", margin: "8px 0 16px" }}>{form.progress || 0} / {resolvedTitle.total} · {pct}% complete</p>
+        <p style={{ fontSize: 11, color: "#7a6b84", margin: "8px 0 16px" }}>{form.progress || 0} / {resolvedTitle.total} - {pct}% complete</p>
         {saved && <p style={{ fontSize: 12, color: "#4ade80", marginBottom: 12 }}>{saved}</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           <Btn onClick={save}>Save Progress</Btn>
@@ -176,7 +176,7 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
             <GlassCard key={s.id} style={{ padding: 12, cursor: "pointer" }} delay={i * 50 + 220}>
               <img src={s.cover} alt={s.title} style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 10, marginBottom: 10 }} />
               <p style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 13, color: "#f0ebff", margin: "0 0 2px" }}>{s.title}</p>
-              <p style={{ fontSize: 10, color: "#7a6b84", margin: 0 }}>{s.type} · {s.rating}</p>
+              <p style={{ fontSize: 10, color: "#7a6b84", margin: 0 }}>{s.type} Â· {s.rating}</p>
             </GlassCard>
           ))}
         </div>
@@ -184,3 +184,4 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
     </div>
   );
 }
+

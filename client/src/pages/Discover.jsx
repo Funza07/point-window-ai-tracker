@@ -85,8 +85,8 @@ export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }
       </div>
       <div style={{ display:"flex", flexWrap:"wrap", gap:10, marginBottom:20 }}>
         <div style={{ position:"relative", flex:"1 1 200px" }}>
-          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14, color: searchFocus ? "#a855f7" : "#7a6b84", transition:"color 0.2s" }}>⊕</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} onFocus={() => setSearchFocus(true)} onBlur={() => setSearchFocus(false)} placeholder="Search titles…"
+          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14, color: searchFocus ? "#a855f7" : "#7a6b84", transition:"color 0.2s" }}>S</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} onFocus={() => setSearchFocus(true)} onBlur={() => setSearchFocus(false)} placeholder="Search titles..."
             style={{ width:"100%", padding:"10px 12px 10px 36px", background: searchFocus ? "rgba(168,85,247,0.07)" : "rgba(255,255,255,0.04)", border:`1px solid ${searchFocus ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.08)"}`, borderRadius:12, color:"#f0ebff", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box", transition:"all 0.3s", boxShadow: searchFocus ? "0 0 20px rgba(168,85,247,0.15)" : "none" }} />
         </div>
         <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
