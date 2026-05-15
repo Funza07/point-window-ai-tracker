@@ -1,7 +1,7 @@
 import { getTitleByIdService, searchTitlesService, similarTitlesService, trendingTitlesService } from "../services/titles.service.js";
 
 export const searchTitles = async (req, res) => {
-  const data = searchTitlesService(req.query || {});
+  const data = await searchTitlesService(req.query || {});
   res.json({ success: true, data });
 };
 

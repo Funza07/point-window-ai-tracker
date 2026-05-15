@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { isDbConfigured, testDbConnection } from "../config/db.js";
 import { getLibrarySourceStatus, listLibrary } from "../services/library.service.js";
+import { searchAniListTitles } from "../services/anilist.service.js";
 
 const r = Router();
 
@@ -29,6 +30,25 @@ r.get("/library-source", async (_req, res) => {
     itemCount: Array.isArray(items) ? items.length : 0,
     timestamp: new Date().toISOString(),
   });
+});
+
+r.get("/anilist", async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    const data = await searchAniListTitles({ q, page: 1, perPage: 10 });
+    res.json({
+      success: true,
+      count: data.length,
+      sample: data.slice(0, 3),
+    });
+  } catch (error) {
+    res.status(200).json({
+      success: true,
+      count: 0,
+      sample: [],
+      warning: error?.message || "AniList debug query failed",
+    });
+  }
 });
 
 export default r;
