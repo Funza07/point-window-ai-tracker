@@ -57,7 +57,7 @@ export default function App() {
     if (page === "library") return <Library isMobile={isMobile} lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onRemove={removeFromLibrary} onOpenLink={openLibraryLink} />;
     if (page === "recommendations") return <Recommendations isMobile={isMobile} lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} />;
     if (page === "ai") return <AIAssistant isMobile={isMobile} lib={lib} />;
-    if (page === "settings") return <Settings />;
+    if (page === "settings") return <Settings isMobile={isMobile} />;
     return <Dashboard isMobile={isMobile} lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} onOpenLink={openLibraryLink} />;
   };
 
@@ -214,6 +214,7 @@ export default function App() {
     </>
   );
 }
+
 
 
 

@@ -1,4 +1,4 @@
-export default function Sidebar({ NAV, page, lib, navigate, isMobile = false }) {
+﻿export default function Sidebar({ NAV, page, lib, navigate, isMobile = false }) {
   if (isMobile) return null;
 
   return (
@@ -12,7 +12,7 @@ export default function Sidebar({ NAV, page, lib, navigate, isMobile = false }) 
       {/* Logo */}
       <div style={{ padding:"6px 8px 26px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-          <div className="logo-icon" style={{ width:34, height:34, borderRadius:10, background:"linear-gradient(135deg,#7c3aed,#a855f7)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>⊕</div>
+          <div className="logo-icon" style={{ width:34, height:34, borderRadius:10, background:"linear-gradient(135deg,#7c3aed,#a855f7)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>PW</div>
           <span style={{ fontFamily:"'Rajdhani',sans-serif", fontWeight:900, fontSize:19, color:"#f0ebff", letterSpacing:"-0.01em" }}>Point Window</span>
         </div>
         <p style={{ fontSize:9, color:"#6b5b78", margin:0, paddingLeft:44, letterSpacing:"0.15em" }}>AI TRACKER</p>
@@ -62,9 +62,10 @@ export default function Sidebar({ NAV, page, lib, navigate, isMobile = false }) 
         <div style={{ width:38, height:38, borderRadius:99, background:"linear-gradient(135deg,#7c3aed,#a855f7)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, fontWeight:900, color:"#fff", boxShadow:"0 0 14px rgba(168,85,247,0.45)", flexShrink:0 }}>B</div>
         <div>
           <p style={{ fontSize:13, fontWeight:700, color:"#f0ebff", margin:0 }}>Bikram</p>
-          <p style={{ fontSize:10, color:"#6b5b78", margin:0 }}>Otaku Sage 🔮</p>
+          <p style={{ fontSize:10, color:"#6b5b78", margin:0 }}>Otaku Sage</p>
         </div>
       </div>
     </aside>
   );
 }
+
