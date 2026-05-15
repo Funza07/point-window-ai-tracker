@@ -1,6 +1,12 @@
 import { mockTitles } from "../data/mockTitles.js";
 import { getAniListTitleById, searchAniListTitles } from "./anilist.service.js";
-import { getAllCachedTitles, getTitleById, upsertTitleSnapshot } from "./titleCache.service.js";
+import {
+  getAllCachedTitles,
+  getTitleById,
+  searchCachedTitles,
+  upsertManyTitleSnapshots,
+  upsertTitleSnapshot,
+} from "./titleCache.service.js";
 
 const normalize = (v = "") => String(v).trim().toLowerCase();
 const toText = (v = "") => String(v ?? "").trim();
@@ -74,48 +80,90 @@ const searchMockTitles = ({ q = "", type = "", status = "", genre = "", sort = "
 const hasSearchIntent = ({ q = "", type = "", status = "", genre = "" } = {}) =>
   Boolean(normalize(q) || normalize(type) || normalize(status) || normalize(genre));
 
+const dedupeByIdPreferLast = (items = [], limit = 20) => {
+  const seen = new Set();
+  const out = [];
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const item = normalizeTitleShape(items[i]);
+    if (!item.id || seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out.reverse().slice(0, limit);
+};
+
 export const searchTitlesService = async ({ q = "", type = "", status = "", genre = "", sort = "Popularity" } = {}) => {
   const input = { q, type, status, genre, sort };
   const mockData = searchMockTitles(input);
-  const nq = normalize(q);
+  const limit = 20;
+  const cacheData = await searchCachedTitles({ ...input, limit });
+  const hasIntent = hasSearchIntent(input);
 
-  if (!hasSearchIntent(input)) {
+  if (!hasIntent) {
+    if (cacheData.length >= 12) return { data: cacheData.slice(0, limit), warning: null };
     try {
       const anilistData = await searchAniListTitles({ q: "", type, status, genre, sort, page: 1, perPage: 16 });
-      if (anilistData.length > 0) return { data: anilistData, warning: null };
-    } catch {
-      // fallback below
+      if (anilistData.length > 0) {
+        await upsertManyTitleSnapshots(anilistData);
+        const merged = dedupeByIdPreferLast([...cacheData, ...anilistData], limit);
+        return { data: merged, warning: null };
+      }
+    } catch (error) {
+      const isRateLimited = error?.code === "ANILIST_RATE_LIMITED" || error?.code === "ANILIST_COOLDOWN";
+      if (cacheData.length > 0) {
+        return {
+          data: cacheData.slice(0, limit),
+          warning: isRateLimited ? "AniList temporarily rate-limited; using cached results" : "AniList unavailable. Using cached results.",
+        };
+      }
     }
+    if (cacheData.length > 0) return { data: cacheData.slice(0, limit), warning: "Using cached catalogue fallback." };
     return { data: mockData, warning: "Using local catalogue fallback." };
   }
 
+  if (cacheData.length >= 12) return { data: cacheData.slice(0, limit), warning: null };
+
   try {
     const anilistData = await searchAniListTitles({ q, type, status, genre, sort, page: 1, perPage: 16 });
-    if (anilistData.length > 0) return { data: anilistData, warning: null };
-
-    const hasQueryMatch = nq && mockData.length > 0;
-    return { data: hasQueryMatch ? mockData : [], warning: hasQueryMatch ? "Using local fallback results." : null };
+    if (anilistData.length > 0) {
+      await upsertManyTitleSnapshots(anilistData);
+      const merged = dedupeByIdPreferLast([...cacheData, ...anilistData], limit);
+      return { data: merged, warning: null };
+    }
+    if (cacheData.length > 0) return { data: cacheData.slice(0, limit), warning: "Using cached fallback results." };
+    return { data: mockData.length > 0 ? mockData.slice(0, limit) : [], warning: mockData.length > 0 ? "Using local fallback results." : null };
   } catch (error) {
     const isRateLimited = error?.code === "ANILIST_RATE_LIMITED" || error?.code === "ANILIST_COOLDOWN";
-    if (!nq) return { data: mockData, warning: "AniList unavailable. Showing local catalogue." };
+    if (cacheData.length > 0) {
+      return {
+        data: cacheData.slice(0, limit),
+        warning: isRateLimited ? "AniList temporarily rate-limited; using cached results" : "AniList unavailable. Using cached results.",
+      };
+    }
     if (isRateLimited) {
       return {
-        data: mockData.length > 0 ? mockData : [],
+        data: mockData.length > 0 ? mockData.slice(0, limit) : [],
         warning: "AniList temporarily rate-limited; using fallback results",
       };
     }
-    return { data: mockData.length > 0 ? mockData : [], warning: "AniList unavailable. Showing fallback results when possible." };
+    return { data: mockData.length > 0 ? mockData.slice(0, limit) : [], warning: "AniList unavailable. Showing fallback results when possible." };
   }
 };
 
 export const trendingTitlesService = async (limit = 10) => {
   const safeLimit = Math.max(0, Math.floor(toNumber(limit, 10)));
+  const cachedTrending = await searchCachedTitles({ q: "", sort: "Popularity", limit: Math.max(safeLimit, 12) });
+  if (cachedTrending.length >= safeLimit && safeLimit > 0) return cachedTrending.slice(0, safeLimit);
   try {
     const anilistData = await searchAniListTitles({ q: "", sort: "Popularity", page: 1, perPage: Math.max(12, safeLimit) });
-    if (anilistData.length > 0) return anilistData.slice(0, safeLimit);
+    if (anilistData.length > 0) {
+      await upsertManyTitleSnapshots(anilistData);
+      return dedupeByIdPreferLast([...cachedTrending, ...anilistData], safeLimit);
+    }
   } catch {
     // fallback below
   }
+  if (cachedTrending.length > 0) return cachedTrending.slice(0, safeLimit);
   return [...mockTitles]
     .map(normalizeTitleShape)
     .sort((a, b) => toNumber(b.popularity, 0) - toNumber(a.popularity, 0))

@@ -8,6 +8,8 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+const normalize = (v = "") => String(v ?? "").trim().toLowerCase();
+
 export const normalizeTitleSnapshot = (title = {}) => {
   const id = String(title.id || "").trim();
   if (!id) return null;
@@ -41,7 +43,7 @@ export const normalizeTitleSnapshot = (title = {}) => {
   };
 };
 
-const mapRowToTitle = (row) => ({
+export const normalizeCachedTitleRow = (row = {}) => ({
   id: row.id,
   externalId: row.external_id === null ? null : Number.isFinite(Number(row.external_id)) ? Number(row.external_id) : row.external_id,
   source: row.source || "mock",
@@ -69,6 +71,8 @@ const mapRowToTitle = (row) => ({
   reason: row.reason || "",
   siteUrl: row.site_url || "",
 });
+
+const mapRowToTitle = (row) => normalizeCachedTitleRow(row);
 
 export const upsertTitleSnapshot = async (titleInput) => {
   const title = normalizeTitleSnapshot(titleInput);
@@ -125,6 +129,16 @@ export const upsertTitleSnapshot = async (titleInput) => {
   } catch {
     return title;
   }
+};
+
+export const upsertManyTitleSnapshots = async (titles = []) => {
+  const items = Array.isArray(titles) ? titles : [];
+  const saved = [];
+  for (const item of items) {
+    const normalized = await upsertTitleSnapshot(item);
+    if (normalized) saved.push(normalized);
+  }
+  return saved;
 };
 
 export const getTitleById = async (id) => {
@@ -185,4 +199,71 @@ export const getAllCachedTitles = async (limit = 200) => {
     }
   }
   return [...titleMemoryCache.values()].slice(0, safeLimit);
+};
+
+export const searchCachedTitles = async ({ q = "", type = "", status = "", genre = "", sort = "Popularity", limit = 20 } = {}) => {
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 20, 100));
+  const nq = normalize(q);
+  const ntype = normalize(type);
+  const nstatus = normalize(status);
+  const ngenre = normalize(genre);
+
+  const applyLocalFilter = (rows = []) => {
+    let list = rows.map((row) => normalizeCachedTitleRow(row)).filter((t) => t?.id);
+    if (nq) {
+      list = list.filter((t) => {
+        const hay = `${t.title} ${t.alt} ${t.type} ${Array.isArray(t.genres) ? t.genres.join(" ") : ""} ${t.synopsis}`.toLowerCase();
+        return hay.includes(nq);
+      });
+    }
+    if (ntype && ntype !== "all") list = list.filter((t) => normalize(t.type) === ntype);
+    if (nstatus && nstatus !== "all") list = list.filter((t) => normalize(t.status) === nstatus);
+    if (ngenre && ngenre !== "all") {
+      list = list.filter((t) => (Array.isArray(t.genres) ? t.genres : []).some((g) => normalize(g) === ngenre));
+    }
+
+    if (sort === "Rating") list = [...list].sort((a, b) => toNumber(b.rating, 0) - toNumber(a.rating, 0));
+    else if (sort === "Latest") list = [...list].sort((a, b) => toNumber(b.year, 0) - toNumber(a.year, 0));
+    else list = [...list].sort((a, b) => toNumber(b.popularity, 0) - toNumber(a.popularity, 0));
+    return list.slice(0, safeLimit);
+  };
+
+  if (isDbAvailable()) {
+    try {
+      const where = [];
+      const params = [];
+      if (nq) {
+        where.push("(LOWER(title) LIKE ? OR LOWER(COALESCE(alt_title, '')) LIKE ? OR LOWER(COALESCE(type, '')) LIKE ? OR LOWER(COALESCE(synopsis, '')) LIKE ? OR LOWER(COALESCE(CAST(genres AS CHAR), '')) LIKE ?)");
+        const like = `%${nq}%`;
+        params.push(like, like, like, like, like);
+      }
+      if (ntype && ntype !== "all") {
+        where.push("LOWER(COALESCE(type, '')) = ?");
+        params.push(ntype);
+      }
+      if (nstatus && nstatus !== "all") {
+        where.push("LOWER(COALESCE(status, '')) = ?");
+        params.push(nstatus);
+      }
+      if (ngenre && ngenre !== "all") {
+        where.push("LOWER(COALESCE(CAST(genres AS CHAR), '')) LIKE ?");
+        params.push(`%${ngenre}%`);
+      }
+
+      const orderClause =
+        sort === "Rating"
+          ? "ORDER BY COALESCE(rating, 0) DESC, updated_at DESC"
+          : sort === "Latest"
+            ? "ORDER BY COALESCE(year, 0) DESC, updated_at DESC"
+            : "ORDER BY COALESCE(popularity, 0) DESC, updated_at DESC";
+
+      const sql = `SELECT * FROM titles ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ${orderClause} LIMIT ?`;
+      const rows = await db.query(sql, [...params, safeLimit]);
+      return applyLocalFilter(rows);
+    } catch {
+      return [];
+    }
+  }
+
+  return applyLocalFilter([...titleMemoryCache.values()]);
 };

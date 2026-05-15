@@ -3,7 +3,7 @@ import { isDbConfigured, testDbConnection } from "../config/db.js";
 import { getLibrarySourceStatus, listLibrary } from "../services/library.service.js";
 import { searchAniListTitles } from "../services/anilist.service.js";
 import { getAniListSearchStatus } from "../services/anilist.service.js";
-import { getTitleCacheCount } from "../services/titleCache.service.js";
+import { getTitleCacheCount, searchCachedTitles } from "../services/titleCache.service.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { similarTitlesService } from "../services/titles.service.js";
 import { getTitleByIdService } from "../services/titles.service.js";
@@ -65,6 +65,24 @@ r.get("/title-cache", async (_req, res) => {
     itemCount,
     timestamp: new Date().toISOString(),
   });
+});
+
+r.get("/title-cache/search", async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    const type = String(req.query.type || "").trim();
+    const status = String(req.query.status || "").trim();
+    const genre = String(req.query.genre || "").trim();
+    const sort = String(req.query.sort || "Popularity").trim();
+    const data = await searchCachedTitles({ q, type, status, genre, sort, limit: 20 });
+    res.json({
+      success: true,
+      count: Array.isArray(data) ? data.length : 0,
+      data: Array.isArray(data) ? data : [],
+    });
+  } catch {
+    res.status(200).json({ success: true, count: 0, data: [] });
+  }
 });
 
 r.get("/request-user", authMiddleware, async (req, res) => {
