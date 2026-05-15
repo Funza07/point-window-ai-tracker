@@ -1,5 +1,7 @@
 const ANILIST_ENDPOINT = "https://graphql.anilist.co";
 const REQUEST_TIMEOUT_MS = 8000;
+const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const anilistSearchCache = new Map();
 
 const TYPE_MAP = {
   anime: "ANIME",
@@ -100,6 +102,19 @@ const toStatus = (status = "") => {
 };
 
 export async function searchAniListTitles({ q, type, status, genre, sort, page = 1, perPage = 20 } = {}) {
+  const cacheKey = JSON.stringify({
+    q: String(q || "").trim().toLowerCase(),
+    type: String(type || "").trim().toLowerCase(),
+    status: String(status || "").trim().toLowerCase(),
+    genre: String(genre || "").trim().toLowerCase(),
+    sort: String(sort || "").trim(),
+    page: Number(page) || 1,
+    perPage: Number(perPage) || 20,
+  });
+  const now = Date.now();
+  const cached = anilistSearchCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) return cached.data;
+
   const searchValue = q ? String(q).trim() : null;
   const typeValue = toType(type);
   const statusValue = toStatus(status);
@@ -187,7 +202,11 @@ export async function searchAniListTitles({ q, type, status, genre, sort, page =
 
     const media = payload?.data?.Page?.media;
     if (!Array.isArray(media)) return [];
-    if (media.length > 0) return media.map(normalizeAniListMedia);
+    if (media.length > 0) {
+      const normalized = media.map(normalizeAniListMedia);
+      anilistSearchCache.set(cacheKey, { data: normalized, expiresAt: now + SEARCH_CACHE_TTL_MS });
+      return normalized;
+    }
 
     if (searchValue) {
       const retryVariables = { ...variables };
@@ -228,9 +247,12 @@ export async function searchAniListTitles({ q, type, status, genre, sort, page =
       const retryPayload = await retryResponse.json();
       const retryMedia = retryPayload?.data?.Page?.media;
       if (!Array.isArray(retryMedia)) return [];
-      return retryMedia.map(normalizeAniListMedia);
+      const normalized = retryMedia.map(normalizeAniListMedia);
+      anilistSearchCache.set(cacheKey, { data: normalized, expiresAt: now + SEARCH_CACHE_TTL_MS });
+      return normalized;
     }
 
+    anilistSearchCache.set(cacheKey, { data: [], expiresAt: now + SEARCH_CACHE_TTL_MS });
     return [];
   } finally {
     clearTimeout(timer);

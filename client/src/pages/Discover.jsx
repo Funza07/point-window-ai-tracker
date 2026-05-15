@@ -3,6 +3,7 @@ import { mockTitles } from "../data/mockTitles";
 import TitleCard from "../components/titles/TitleCard";
 import { upsertItem } from "../utils/storageUtils";
 import { titleService } from "../services/titleService";
+import { buildLibraryPayload } from "../utils/libraryTitle";
 
 export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }) {
   const [search, setSearch] = useState("");
@@ -27,7 +28,10 @@ export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }
     return () => { mounted = false; };
   }, [search, filter, sort]);
 
-  const onAddLocal = (t) => setLib(upsertItem({ id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" }, lib));
+  const onAddLocal = (t) => {
+    const payload = buildLibraryPayload(t, { libraryStatus: "Watching" });
+    setLib(upsertItem({ ...payload, titleStatus: payload.status, status: payload.libraryStatus, userStatus: payload.libraryStatus }, lib));
+  };
   const onView = (t) => { setDetailTitle(t); setPage("detail"); };
 
   return (
@@ -53,7 +57,7 @@ export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }
       </div>
       <p style={{ fontSize:10, color:"#7a6b84", marginBottom:18, letterSpacing:"0.1em" }}>{list.length} TITLES FOUND</p>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:16 }}>
-        {list.map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd ? (x) => onAdd({ id:x.id, status:"Watching", progress:0, score:"", notes:"", link:"" }) : onAddLocal} onView={onView} delay={i * 40} />)}
+        {list.map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd ? (x) => onAdd(buildLibraryPayload(x, { libraryStatus: "Watching" })) : onAddLocal} onView={onView} delay={i * 40} />)}
       </div>
     </div>
   );

@@ -1,18 +1,23 @@
 import { useState } from "react";
-import { mockTitles } from "../data/mockTitles";
 import GlassCard from "../components/common/GlassCard";
 import Badge from "../components/common/Badge";
 import ProgressBar from "../components/common/ProgressBar";
 import Btn from "../components/common/Button";
 import { typeColor } from "../utils/titleUtils";
 import { removeItem } from "../utils/storageUtils";
+import { resolveLibraryTitle } from "../utils/libraryTitle";
 
 export default function Library({ lib, setLib, setPage, setDetailTitle, onRemove, onOpenLink }) {
   const [tab, setTab] = useState("All");
   const TABS = ["All","Anime","Manga","Manhwa","Watching","Reading","Completed","Planned","Dropped"];
-  const rows = lib.map(item => ({ item, title: mockTitles.find(t => t.id === item.id) })).filter(x => x.title);
-  const filtered = rows.filter(({ item, title }) => tab === "All" || title.type === tab || item.status?.toLowerCase() === tab.toLowerCase());
-  const stats = { total:rows.length, active:rows.filter(x => ["Watching","Reading"].includes(x.item.status)).length, done:rows.filter(x => x.item.status === "Completed").length, planned:rows.filter(x => x.item.status === "Planned").length };
+  const rows = lib.map((item) => ({ item, title: resolveLibraryTitle(item) })).filter((x) => x.title);
+  const filtered = rows.filter(({ item, title }) => tab === "All" || title.type === tab || (item.userStatus || item.status)?.toLowerCase() === tab.toLowerCase());
+  const stats = {
+    total: rows.length,
+    active: rows.filter((x) => ["Watching", "Reading"].includes(x.item.userStatus || x.item.status)).length,
+    done: rows.filter((x) => (x.item.userStatus || x.item.status) === "Completed").length,
+    planned: rows.filter((x) => (x.item.userStatus || x.item.status) === "Planning").length,
+  };
   const onView = (t) => { setDetailTitle(t); setPage("detail"); };
 
   return (
@@ -57,7 +62,7 @@ export default function Library({ lib, setLib, setPage, setDetailTitle, onRemove
                   <p style={{ fontFamily:"'Rajdhani',sans-serif", fontWeight:800, fontSize:15, color:"#f0ebff", margin:"0 0 4px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{title.title}</p>
                   <div style={{ display:"flex", gap:4, marginBottom:6 }}>
                     <Badge color={c}>{title.type}</Badge>
-                    <Badge color="#8a7898">{item.status || "Watching"}</Badge>
+                    <Badge color="#8a7898">{item.userStatus || item.status || "Watching"}</Badge>
                   </div>
                   <p style={{ fontSize:11, color:"#7a6b84", margin:"0 0 4px" }}>Progress: {item.progress} / {title.total}</p>
                   <ProgressBar pct={pct} color={c} />

@@ -9,6 +9,7 @@ import TitleCard from "../components/titles/TitleCard";
 import { typeColor } from "../utils/titleUtils";
 import { upsertItem } from "../utils/storageUtils";
 import { titleService } from "../services/titleService";
+import { buildLibraryPayload, resolveLibraryTitle } from "../utils/libraryTitle";
 
 export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd, onOpenLink }) {
   const [search, setSearch] = useState("");
@@ -16,12 +17,12 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd,
   const [trending, setTrending] = useState([...mockTitles].sort((a, b) => b.popularity - a.popularity).slice(0, 5));
   const [catalog, setCatalog] = useState(mockTitles);
   const hero = catalog[3] || mockTitles[3];
-  const continueItems = lib.slice(0, 4).map(item => ({ item, title: mockTitles.find(t => t.id === item.id) })).filter(x => x.title);
+  const continueItems = lib.slice(0, 4).map((item) => ({ item, title: resolveLibraryTitle(item) })).filter((x) => x.title);
   const searched = search ? catalog.filter(t => `${t.title} ${t.alt} ${t.type} ${t.genres.join(" ")}`.toLowerCase().includes(search.toLowerCase())) : [];
   const handleAdd = (t) => {
-    const item = { id:t.id, status:"Watching", progress:0, score:"", notes:"", link:"" };
+    const item = buildLibraryPayload(t, { libraryStatus: "Watching" });
     if (onAdd) return onAdd(item);
-    setLib(upsertItem(item, lib));
+    setLib(upsertItem({ ...item, titleStatus: item.status, status: item.libraryStatus, userStatus: item.libraryStatus }, lib));
   };
   const onView = (t) => { setDetailTitle(t); setPage("detail"); };
 
@@ -115,7 +116,7 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd,
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontFamily:"'Rajdhani',sans-serif", fontWeight:800, fontSize:15, color:"#f0ebff", margin:"0 0 2px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{title.title}</p>
                   <Badge color={typeColor(title.type)}>{title.type}</Badge>
-                  <p style={{ fontSize:11, color:"#7a6b84", margin:"6px 0 4px" }}>{item.status} · Ep/Ch {item.progress}</p>
+                  <p style={{ fontSize:11, color:"#7a6b84", margin:"6px 0 4px" }}>{item.userStatus || item.status} · Ep/Ch {item.progress}</p>
                   <ProgressBar pct={title.total ? Math.round((item.progress / title.total) * 100) : 0} color={typeColor(title.type)} />
                   <div style={{ marginTop:8, display:"flex", gap:6 }}>
                     <Btn small onClick={() => onView(title)}>Continue</Btn>

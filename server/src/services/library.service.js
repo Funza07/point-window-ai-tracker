@@ -1,5 +1,6 @@
 import { sanitizeLink, sanitizeText } from "../utils/sanitize.js";
 import { db, isDbAvailable, testDbConnection } from "../config/db.js";
+import { getTitlesByIds, upsertTitleSnapshot } from "./titleCache.service.js";
 
 const libByUser = new Map();
 const VALID_STATUS = new Set(["Planning", "Watching", "Reading", "Completed", "Dropped"]);
@@ -23,6 +24,7 @@ const normalizeProgress = (value) => {
 const mapDbRowToClient = (row) => ({
   id: row.title_id,
   status: row.status || "Planning",
+  userStatus: row.status || "Planning",
   progress: Number(row.progress || 0),
   score: row.score === null ? "" : Number(row.score),
   notes: row.notes || "",
@@ -31,6 +33,40 @@ const mapDbRowToClient = (row) => ({
   created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
   updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
 });
+
+const mergeLibraryWithTitle = (item, title) => {
+  if (!title) return item;
+  return {
+    ...item,
+    title: title.title || "",
+    alt: title.alt || "",
+    type: title.type || "",
+    total: Number(title.total || 0),
+    rating: title.rating === null ? 0 : Number(title.rating || 0),
+    genres: Array.isArray(title.genres) ? title.genres : [],
+    synopsis: title.synopsis || "",
+    cover: title.cover || "",
+    banner: title.banner || "",
+    popularity: Number(title.popularity || 0),
+    year: Number(title.year || 0),
+    reason: title.reason || "",
+    source: title.source || "mock",
+    externalId: title.externalId ?? null,
+    siteUrl: title.siteUrl || "",
+  };
+};
+
+const enrichLibraryItems = async (items = []) => {
+  const ids = items.map((item) => item.id).filter(Boolean);
+  if (!ids.length) return items;
+  try {
+    const titles = await getTitlesByIds(ids);
+    const titleById = new Map(titles.map((title) => [title.id, title]));
+    return items.map((item) => mergeLibraryWithTitle(item, titleById.get(item.id)));
+  } catch {
+    return items;
+  }
+};
 
 const memoryStore = {
   list(userId) {
@@ -85,7 +121,8 @@ const memoryStore = {
 
 export const sanitizeLibraryPayload = (payload = {}) => {
   const id = String(payload.id ?? payload.titleId ?? "").trim();
-  const status = VALID_STATUS.has(payload.status) ? payload.status : "Planning";
+  const requestedStatus = payload.libraryStatus ?? payload.userStatus ?? payload.status;
+  const status = VALID_STATUS.has(requestedStatus) ? requestedStatus : "Planning";
   return {
     id,
     status,
@@ -107,7 +144,7 @@ export const sanitizeLibraryPatch = (payload = {}) => {
 };
 
 export const listLibrary = async (userId) => {
-  if (!isDbAvailable()) return memoryStore.list(userId);
+  if (!isDbAvailable()) return enrichLibraryItems(memoryStore.list(userId));
   try {
     const rows = await db.query(
       `SELECT title_id, status, progress, score, notes, saved_link, last_opened_at, created_at, updated_at
@@ -116,14 +153,15 @@ export const listLibrary = async (userId) => {
        ORDER BY updated_at DESC`,
       [userId],
     );
-    return rows.map(mapDbRowToClient);
+    return enrichLibraryItems(rows.map(mapDbRowToClient));
   } catch (err) {
     warn("MySQL list failed, falling back to in-memory", err);
-    return memoryStore.list(userId);
+    return enrichLibraryItems(memoryStore.list(userId));
   }
 };
 
-export const upsertLibraryItem = async (userId, payload) => {
+export const upsertLibraryItem = async (userId, payload, rawPayload = {}) => {
+  await upsertTitleSnapshot(rawPayload);
   if (!isDbAvailable()) return memoryStore.upsert(userId, payload);
   try {
     await db.query(

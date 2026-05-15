@@ -2,6 +2,11 @@ import { apiClient } from "./apiClient";
 import { getLib, saveLib, upsertItem, removeItem } from "../utils/storageUtils";
 
 const normalizeListResponse = (res) => (Array.isArray(res?.data) ? res.data : []);
+const toLocalLibraryItem = (item = {}) => ({
+  ...item,
+  userStatus: item.libraryStatus || item.userStatus || item.status || "Planning",
+  status: item.libraryStatus || item.userStatus || item.status || "Planning",
+});
 
 export const libraryService = {
   async list() {
@@ -21,7 +26,7 @@ export const libraryService = {
       saveLib(data);
       return { success: true, data, source: "backend" };
     } catch {
-      const data = upsertItem(item, getLib());
+      const data = upsertItem(toLocalLibraryItem(item), getLib());
       return { success: true, data, source: "local" };
     }
   },

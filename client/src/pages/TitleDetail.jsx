@@ -11,11 +11,19 @@ import TitleCard from "../components/titles/TitleCard";
 import { typeColor, typeGlow } from "../utils/titleUtils";
 import { upsertItem } from "../utils/storageUtils";
 import { titleService } from "../services/titleService";
+import { buildLibraryPayload } from "../utils/libraryTitle";
 
 export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd, onOpenLink }) {
   const [form, setForm] = useState(() => {
     const item = lib.find(x => x.id === title.id);
-    return item || { status:"Planning", progress:0, score:"", notes:"", link:"" };
+    if (!item) return { status:"Planning", progress:0, score:"", notes:"", link:"" };
+    return {
+      status: item.userStatus || item.status || "Planning",
+      progress: item.progress || 0,
+      score: item.score ?? "",
+      notes: item.notes || "",
+      link: item.link || "",
+    };
   });
   const [saved, setSaved] = useState("");
   const c = typeColor(title.type);
@@ -24,20 +32,32 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
   const [similar, setSimilar] = useState(localSimilar);
 
   const save = () => {
-    const payload = { id:title.id, ...form };
+    const payload = buildLibraryPayload(title, {
+      libraryStatus: form.status,
+      progress: form.progress,
+      score: form.score,
+      notes: form.notes,
+      link: form.link,
+    });
     if (onSave) onSave(title.id, payload);
     else if (onAdd) onAdd(payload);
-    else setLib(upsertItem(payload, lib));
+    else setLib(upsertItem({ ...payload, titleStatus: payload.status, status: payload.libraryStatus, userStatus: payload.libraryStatus }, lib));
     setSaved("âœ“ Saved to library!");
     setTimeout(() => setSaved(""), 2500);
   };
   const complete = () => {
     const updated = { ...form, status:"Completed", progress:title.total };
     setForm(updated);
-    const payload = { id:title.id, ...updated };
+    const payload = buildLibraryPayload(title, {
+      libraryStatus: updated.status,
+      progress: updated.progress,
+      score: updated.score,
+      notes: updated.notes,
+      link: updated.link,
+    });
     if (onSave) onSave(title.id, payload);
     else if (onAdd) onAdd(payload);
-    else setLib(upsertItem(payload, lib));
+    else setLib(upsertItem({ ...payload, titleStatus: payload.status, status: payload.libraryStatus, userStatus: payload.libraryStatus }, lib));
     setSaved("âœ“ Marked as Completed!");
     setTimeout(() => setSaved(""), 2500);
   };

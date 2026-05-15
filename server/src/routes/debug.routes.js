@@ -2,6 +2,7 @@ import { Router } from "express";
 import { isDbConfigured, testDbConnection } from "../config/db.js";
 import { getLibrarySourceStatus, listLibrary } from "../services/library.service.js";
 import { searchAniListTitles } from "../services/anilist.service.js";
+import { getTitleCacheCount } from "../services/titleCache.service.js";
 
 const r = Router();
 
@@ -49,6 +50,15 @@ r.get("/anilist", async (req, res) => {
       warning: error?.message || "AniList debug query failed",
     });
   }
+});
+
+r.get("/title-cache", async (_req, res) => {
+  const itemCount = await getTitleCacheCount();
+  res.json({
+    success: true,
+    itemCount,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 export default r;

@@ -7,7 +7,7 @@ export const getLibrary = async (req, res) => {
 export const createLibraryItem = async (req, res) => {
   const payload = sanitizeLibraryPayload(req.body);
   if (!payload.id) return res.status(400).json({ success: false, message: "title id is required", data: null });
-  const data = await upsertLibraryItem(req.user.id, payload);
+  const data = await upsertLibraryItem(req.user.id, payload, req.body || {});
   res.status(201).json({ success: true, data, message: "Library item saved" });
 };
 
