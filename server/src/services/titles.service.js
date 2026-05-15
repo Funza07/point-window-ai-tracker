@@ -1,5 +1,6 @@
 import { mockTitles } from "../data/mockTitles.js";
 import { searchAniListTitles } from "./anilist.service.js";
+import { getTitleById } from "./titleCache.service.js";
 
 const normalize = (v = "") => String(v).trim().toLowerCase();
 
@@ -32,24 +33,30 @@ const hasSearchIntent = ({ q = "", type = "", status = "", genre = "" } = {}) =>
 export const searchTitlesService = async ({ q = "", type = "", status = "", genre = "", sort = "Popularity" } = {}) => {
   const input = { q, type, status, genre, sort };
   const mockData = searchMockTitles(input);
+  const nq = normalize(q);
 
-  if (!hasSearchIntent(input)) return mockData;
+  if (!hasSearchIntent(input)) return { data: mockData, warning: null };
 
   try {
     const anilistData = await searchAniListTitles({ q, type, status, genre, sort, page: 1, perPage: 20 });
-    if (anilistData.length > 0) return anilistData;
+    if (anilistData.length > 0) return { data: anilistData, warning: null };
 
-    const hasQueryMatch = normalize(q) && mockData.length > 0;
-    return hasQueryMatch ? mockData : [];
+    const hasQueryMatch = nq && mockData.length > 0;
+    return { data: hasQueryMatch ? mockData : [], warning: hasQueryMatch ? "Using local fallback results." : null };
   } catch (error) {
     console.warn("[titles.search] AniList search failed; using mock fallback.", error?.message || error);
-    return mockData;
+    if (!nq) return { data: mockData, warning: "AniList unavailable. Showing local catalogue." };
+    return { data: mockData.length > 0 ? mockData : [], warning: "AniList unavailable. Showing fallback results when possible." };
   }
 };
 
 export const trendingTitlesService = (limit = 10) => [...mockTitles].sort((a, b) => b.popularity - a.popularity).slice(0, limit);
 
-export const getTitleByIdService = (id) => mockTitles.find((t) => t.id === id) || null;
+export const getTitleByIdService = async (id) => {
+  const fromMock = mockTitles.find((t) => t.id === id) || null;
+  if (fromMock) return fromMock;
+  return getTitleById(id);
+};
 
 export const similarTitlesService = (id, limit = 6) => {
   const base = getTitleByIdService(id);

@@ -162,7 +162,7 @@ export const listLibrary = async (userId) => {
 
 export const upsertLibraryItem = async (userId, payload, rawPayload = {}) => {
   await upsertTitleSnapshot(rawPayload);
-  if (!isDbAvailable()) return memoryStore.upsert(userId, payload);
+  if (!isDbAvailable()) return enrichLibraryItems(memoryStore.upsert(userId, payload));
   try {
     await db.query(
       `INSERT INTO user_library (user_id, title_id, status, progress, score, notes, saved_link)
@@ -187,12 +187,12 @@ export const upsertLibraryItem = async (userId, payload, rawPayload = {}) => {
     return await listLibrary(userId);
   } catch (err) {
     warn("MySQL upsert failed, falling back to in-memory", err);
-    return memoryStore.upsert(userId, payload);
+    return enrichLibraryItems(memoryStore.upsert(userId, payload));
   }
 };
 
 export const updateLibraryItem = async (userId, titleId, patch) => {
-  if (!isDbAvailable()) return memoryStore.update(userId, titleId, patch);
+  if (!isDbAvailable()) return enrichLibraryItems(memoryStore.update(userId, titleId, patch));
   try {
     const fields = [];
     const params = [];
@@ -208,23 +208,26 @@ export const updateLibraryItem = async (userId, titleId, patch) => {
     return await listLibrary(userId);
   } catch (err) {
     warn("MySQL update failed, falling back to in-memory", err);
-    return memoryStore.update(userId, titleId, patch);
+    return enrichLibraryItems(memoryStore.update(userId, titleId, patch));
   }
 };
 
 export const removeLibraryItem = async (userId, titleId) => {
-  if (!isDbAvailable()) return memoryStore.remove(userId, titleId);
+  if (!isDbAvailable()) return enrichLibraryItems(memoryStore.remove(userId, titleId));
   try {
     await db.query("DELETE FROM user_library WHERE user_id = ? AND title_id = ?", [userId, titleId]);
     return await listLibrary(userId);
   } catch (err) {
     warn("MySQL delete failed, falling back to in-memory", err);
-    return memoryStore.remove(userId, titleId);
+    return enrichLibraryItems(memoryStore.remove(userId, titleId));
   }
 };
 
 export const openLibraryLink = async (userId, titleId) => {
-  if (!isDbAvailable()) return memoryStore.openLink(userId, titleId);
+  if (!isDbAvailable()) {
+    const result = memoryStore.openLink(userId, titleId);
+    return { ...result, list: await enrichLibraryItems(result.list) };
+  }
   try {
     await db.query(
       `UPDATE user_library
@@ -244,7 +247,8 @@ export const openLibraryLink = async (userId, titleId) => {
     return { list: await listLibrary(userId), openedAt, item };
   } catch (err) {
     warn("MySQL open-link failed, falling back to in-memory", err);
-    return memoryStore.openLink(userId, titleId);
+    const result = memoryStore.openLink(userId, titleId);
+    return { ...result, list: await enrichLibraryItems(result.list) };
   }
 };
 

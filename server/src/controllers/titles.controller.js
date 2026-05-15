@@ -1,12 +1,12 @@
 import { getTitleByIdService, searchTitlesService, similarTitlesService, trendingTitlesService } from "../services/titles.service.js";
 
 export const searchTitles = async (req, res) => {
-  const data = await searchTitlesService(req.query || {});
-  res.json({ success: true, data });
+  const result = await searchTitlesService(req.query || {});
+  res.json({ success: true, data: result.data || [], ...(result.warning ? { warning: result.warning } : {}) });
 };
 
 export const getTitle = async (req, res) => {
-  const data = getTitleByIdService(req.params.id);
+  const data = await getTitleByIdService(req.params.id);
   if (!data) return res.status(404).json({ success: false, data: null, message: "Title not found" });
   res.json({ success: true, data });
 };

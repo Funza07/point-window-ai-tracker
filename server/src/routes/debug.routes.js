@@ -3,6 +3,7 @@ import { isDbConfigured, testDbConnection } from "../config/db.js";
 import { getLibrarySourceStatus, listLibrary } from "../services/library.service.js";
 import { searchAniListTitles } from "../services/anilist.service.js";
 import { getTitleCacheCount } from "../services/titleCache.service.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const r = Router();
 
@@ -58,6 +59,13 @@ r.get("/title-cache", async (_req, res) => {
     success: true,
     itemCount,
     timestamp: new Date().toISOString(),
+  });
+});
+
+r.get("/request-user", authMiddleware, async (req, res) => {
+  res.json({
+    success: true,
+    userId: req.user?.id || "dev-user",
   });
 });
 

@@ -2,7 +2,28 @@ import { mockTitles } from "../data/mockTitles";
 
 export const resolveLibraryTitle = (item) => {
   const fromItem = item && item.title ? item : null;
-  return fromItem || mockTitles.find((t) => t.id === item?.id) || null;
+  if (fromItem) return fromItem;
+  const fromMock = mockTitles.find((t) => t.id === item?.id);
+  if (fromMock) return fromMock;
+  return {
+    id: item?.id || "unknown",
+    title: item?.id || "Unknown Title",
+    alt: "",
+    type: "Unknown",
+    status: "",
+    total: 0,
+    rating: 0,
+    genres: [],
+    synopsis: "",
+    cover: "https://picsum.photos/seed/pw-fallback/400/580",
+    banner: "https://picsum.photos/seed/pw-fallback-banner/1200/420",
+    popularity: 0,
+    year: 0,
+    reason: "",
+    source: "unknown",
+    externalId: null,
+    siteUrl: "",
+  };
 };
 
 export const buildLibraryPayload = (title, overrides = {}) => ({

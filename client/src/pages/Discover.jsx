@@ -7,26 +7,42 @@ import { buildLibraryPayload } from "../utils/libraryTitle";
 
 export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchFocus, setSearchFocus] = useState(false);
   const [filter, setFilter] = useState("All");
   const [sort, setSort] = useState("Popularity");
   const [list, setList] = useState(mockTitles);
+  const [loading, setLoading] = useState(false);
   const FILTERS = ["All","Anime","Manga","Manhwa","Ongoing","Completed"];
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
+      setLoading(true);
       const params = {
-        q: search,
+        q: debouncedSearch,
         type: ["Anime","Manga","Manhwa"].includes(filter) ? filter : "",
         status: ["Ongoing","Completed"].includes(filter) ? filter : "",
         sort,
       };
       const res = await titleService.search(params);
-      if (mounted) setList(Array.isArray(res.data) ? res.data : mockTitles);
+      if (mounted && Array.isArray(res.data)) {
+        if (!debouncedSearch && !params.type && !params.status && res.data.length === 0) {
+          const trend = await titleService.trending();
+          setList(Array.isArray(trend.data) && trend.data.length ? trend.data : mockTitles);
+        } else {
+          setList(res.data);
+        }
+      }
+      if (mounted) setLoading(false);
     })();
     return () => { mounted = false; };
-  }, [search, filter, sort]);
+  }, [debouncedSearch, filter, sort]);
 
   const onAddLocal = (t) => {
     const payload = buildLibraryPayload(t, { libraryStatus: "Watching" });
@@ -55,7 +71,7 @@ export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }
           <option>Popularity</option><option>Rating</option><option>Latest</option>
         </select>
       </div>
-      <p style={{ fontSize:10, color:"#7a6b84", marginBottom:18, letterSpacing:"0.1em" }}>{list.length} TITLES FOUND</p>
+      <p style={{ fontSize:10, color:"#7a6b84", marginBottom:18, letterSpacing:"0.1em" }}>{loading ? "LOADING..." : `${list.length} TITLES FOUND`}</p>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:16 }}>
         {list.map((t, i) => <TitleCard key={t.id} title={t} lib={lib} onAdd={onAdd ? (x) => onAdd(buildLibraryPayload(x, { libraryStatus: "Watching" })) : onAddLocal} onView={onView} delay={i * 40} />)}
       </div>
