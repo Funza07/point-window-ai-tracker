@@ -7,3 +7,31 @@
 .page-enter{opacity:0;animation:pageEnter .45s cubic-bezier(.4,0,.2,1) forwards}
 @media (max-width:900px){.main-area{margin-left:0;padding:18px 14px 90px}.desktop-only{display:none!important}.mobile-only{display:flex!important}}
 .mobile-only{display:none}
+
+.hide-scrollbar{
+  -ms-overflow-style:none;
+  scrollbar-width:none;
+}
+.hide-scrollbar::-webkit-scrollbar{
+  display:none;
+}
+
+@keyframes heroFade{
+  from{opacity:.7}
+  to{opacity:1}
+}
+
+.hero-shimmer{
+  position:absolute;
+  top:0;
+  left:-60%;
+  width:40%;
+  height:100%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.04),transparent);
+  animation:shimmer 4s ease-in-out infinite;
+}
+
+@keyframes shimmer{
+  0%{left:-60%}
+  100%{left:130%}
+}
