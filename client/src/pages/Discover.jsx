@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { mockTitles } from "../data/mockTitles";
 import TitleCard from "../components/titles/TitleCard";
 import { upsertItem } from "../utils/storageUtils";
@@ -13,35 +13,62 @@ export default function Discover({ lib, setLib, setPage, setDetailTitle, onAdd }
   const [sort, setSort] = useState("Popularity");
   const [list, setList] = useState(mockTitles);
   const [loading, setLoading] = useState(false);
+  const latestRequestRef = useRef(0);
+  const lastQuerySignatureRef = useRef("");
   const FILTERS = ["All","Anime","Manga","Manhwa","Ongoing","Completed"];
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 400);
+    const timer = setTimeout(() => setDebouncedSearch(search), 600);
     return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
     let mounted = true;
+    const searchText = String(debouncedSearch || "").trim();
+    if (searchText.length === 1) {
+      setLoading(false);
+      return () => {
+        mounted = false;
+      };
+    }
+
+    const params = {
+      q: searchText,
+      type: ["Anime","Manga","Manhwa"].includes(filter) ? filter : "",
+      status: ["Ongoing","Completed"].includes(filter) ? filter : "",
+      sort,
+    };
+    const querySignature = JSON.stringify(params);
+    if (querySignature === lastQuerySignatureRef.current) {
+      return () => {
+        mounted = false;
+      };
+    }
+    lastQuerySignatureRef.current = querySignature;
+
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
+    const controller = new AbortController();
     (async () => {
       setLoading(true);
-      const params = {
-        q: debouncedSearch,
-        type: ["Anime","Manga","Manhwa"].includes(filter) ? filter : "",
-        status: ["Ongoing","Completed"].includes(filter) ? filter : "",
-        sort,
-      };
-      const res = await titleService.search(params);
-      if (mounted && Array.isArray(res.data)) {
-        if (!debouncedSearch && !params.type && !params.status && res.data.length === 0) {
+      const res = await titleService.search(params, { signal: controller.signal });
+      if (!mounted || latestRequestRef.current !== requestId) return;
+      if (Array.isArray(res.data)) {
+        if (!searchText && !params.type && !params.status && res.data.length === 0) {
           const trend = await titleService.trending();
-          setList(Array.isArray(trend.data) && trend.data.length ? trend.data : mockTitles);
+          if (mounted && latestRequestRef.current === requestId) {
+            setList(Array.isArray(trend.data) && trend.data.length ? trend.data : mockTitles);
+          }
         } else {
           setList(res.data);
         }
       }
-      if (mounted) setLoading(false);
+      if (mounted && latestRequestRef.current === requestId) setLoading(false);
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
   }, [debouncedSearch, filter, sort]);
 
   const onAddLocal = (t) => {

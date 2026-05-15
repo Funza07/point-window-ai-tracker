@@ -25,7 +25,7 @@ const localSearch = (params = {}) => {
 };
 
 export const titleService = {
-  async search(params = {}) {
+  async search(params = {}, options = {}) {
     const qp = new URLSearchParams({
       q: params.q || "",
       type: params.type || "",
@@ -34,7 +34,7 @@ export const titleService = {
       sort: params.sort || "",
     });
     try {
-      const res = await apiClient.request(`/titles/search?${qp.toString()}`);
+      const res = await apiClient.request(`/titles/search?${qp.toString()}`, options);
       return { success: true, data: Array.isArray(res?.data) ? res.data : [] };
     } catch {
       return { success: true, data: localSearch(params), source: "local" };

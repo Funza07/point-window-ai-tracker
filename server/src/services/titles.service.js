@@ -82,14 +82,20 @@ export const searchTitlesService = async ({ q = "", type = "", status = "", genr
   if (!hasSearchIntent(input)) return { data: mockData, warning: null };
 
   try {
-    const anilistData = await searchAniListTitles({ q, type, status, genre, sort, page: 1, perPage: 20 });
+    const anilistData = await searchAniListTitles({ q, type, status, genre, sort, page: 1, perPage: 16 });
     if (anilistData.length > 0) return { data: anilistData, warning: null };
 
     const hasQueryMatch = nq && mockData.length > 0;
     return { data: hasQueryMatch ? mockData : [], warning: hasQueryMatch ? "Using local fallback results." : null };
   } catch (error) {
-    console.warn("[titles.search] AniList search failed; using mock fallback.", error?.message || error);
+    const isRateLimited = error?.code === "ANILIST_RATE_LIMITED" || error?.code === "ANILIST_COOLDOWN";
     if (!nq) return { data: mockData, warning: "AniList unavailable. Showing local catalogue." };
+    if (isRateLimited) {
+      return {
+        data: mockData.length > 0 ? mockData : [],
+        warning: "AniList temporarily rate-limited; using fallback results",
+      };
+    }
     return { data: mockData.length > 0 ? mockData : [], warning: "AniList unavailable. Showing fallback results when possible." };
   }
 };

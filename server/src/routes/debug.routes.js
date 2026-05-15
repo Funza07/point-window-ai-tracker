@@ -2,6 +2,7 @@ import { Router } from "express";
 import { isDbConfigured, testDbConnection } from "../config/db.js";
 import { getLibrarySourceStatus, listLibrary } from "../services/library.service.js";
 import { searchAniListTitles } from "../services/anilist.service.js";
+import { getAniListSearchStatus } from "../services/anilist.service.js";
 import { getTitleCacheCount } from "../services/titleCache.service.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { similarTitlesService } from "../services/titles.service.js";
@@ -78,6 +79,18 @@ r.get("/similar-test", async (req, res) => {
   } catch {
     res.status(200).json({ success: true, data: [], warning: "Similar titles unavailable" });
   }
+});
+
+r.get("/anilist-status", async (_req, res) => {
+  const status = getAniListSearchStatus();
+  res.json({
+    success: true,
+    cacheSize: status.cacheSize,
+    inFlightCount: status.inFlightCount,
+    cooldownActive: status.cooldownActive,
+    ...(status.cooldownUntil ? { cooldownUntil: status.cooldownUntil } : {}),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 export default r;

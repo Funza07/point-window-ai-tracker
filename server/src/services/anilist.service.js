@@ -1,7 +1,13 @@
 const ANILIST_ENDPOINT = "https://graphql.anilist.co";
 const REQUEST_TIMEOUT_MS = 8000;
-const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const SUCCESS_TTL_MS = 10 * 60 * 1000;
+const EMPTY_TTL_MS = 3 * 60 * 1000;
+const RATE_LIMIT_TTL_MS = 2 * 60 * 1000;
+const FAILURE_TTL_MS = 30 * 1000;
 const anilistSearchCache = new Map();
+const inFlightSearches = new Map();
+let globalCooldownUntil = 0;
+let cooldownLoggedAt = 0;
 
 const TYPE_MAP = {
   anime: "ANIME",
@@ -101,19 +107,44 @@ const toStatus = (status = "") => {
   return STATUS_IN_MAP[key] || null;
 };
 
-export async function searchAniListTitles({ q, type, status, genre, sort, page = 1, perPage = 20 } = {}) {
-  const cacheKey = JSON.stringify({
+const getCacheKey = ({ q, type, status, genre, sort, page, perPage }) =>
+  JSON.stringify({
     q: String(q || "").trim().toLowerCase(),
     type: String(type || "").trim().toLowerCase(),
     status: String(status || "").trim().toLowerCase(),
     genre: String(genre || "").trim().toLowerCase(),
     sort: String(sort || "").trim(),
     page: Number(page) || 1,
-    perPage: Number(perPage) || 20,
+    perPage: Number(perPage) || 16,
   });
-  const now = Date.now();
-  const cached = anilistSearchCache.get(cacheKey);
-  if (cached && cached.expiresAt > now) return cached.data;
+
+const setCacheEntry = (cacheKey, data, ttlMs) => {
+  anilistSearchCache.set(cacheKey, { data, expiresAt: Date.now() + ttlMs });
+};
+
+const setGlobalCooldown = (ttlMs) => {
+  globalCooldownUntil = Date.now() + ttlMs;
+  if (Date.now() - cooldownLoggedAt > 5000) {
+    cooldownLoggedAt = Date.now();
+    console.warn(`[anilist] Global cooldown active for ${Math.round(ttlMs / 1000)}s due to rate limit.`);
+  }
+};
+
+const isCooldownActive = () => Date.now() < globalCooldownUntil;
+
+export const getAniListSearchStatus = () => ({
+  cacheSize: anilistSearchCache.size,
+  inFlightCount: inFlightSearches.size,
+  cooldownActive: isCooldownActive(),
+  cooldownUntil: isCooldownActive() ? new Date(globalCooldownUntil).toISOString() : null,
+});
+
+const runAniListSearch = async ({ q, type, status, genre, sort, page = 1, perPage = 16, cacheKey }) => {
+  if (isCooldownActive()) {
+    const cooldownError = new Error("AniList cooling down");
+    cooldownError.code = "ANILIST_COOLDOWN";
+    throw cooldownError;
+  }
 
   const searchValue = q ? String(q).trim() : null;
   const typeValue = toType(type);
@@ -126,7 +157,7 @@ export async function searchAniListTitles({ q, type, status, genre, sort, page =
   const mediaArgs = [];
   const variables = {
     page: Number(page) || 1,
-    perPage: Number(perPage) || 20,
+    perPage: Number(perPage) || 16,
   };
 
   if (searchValue) {
@@ -192,19 +223,23 @@ export async function searchAniListTitles({ q, type, status, genre, sort, page =
     });
 
     if (!response.ok) {
-      throw new Error(`AniList request failed with HTTP ${response.status}`);
+      const err = new Error(`AniList request failed with HTTP ${response.status}`);
+      err.code = response.status === 429 ? "ANILIST_RATE_LIMITED" : "ANILIST_HTTP_ERROR";
+      throw err;
     }
 
     const payload = await response.json();
     if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
-      throw new Error(payload.errors[0]?.message || "AniList GraphQL error");
+      const err = new Error(payload.errors[0]?.message || "AniList GraphQL error");
+      err.code = "ANILIST_GRAPHQL_ERROR";
+      throw err;
     }
 
     const media = payload?.data?.Page?.media;
     if (!Array.isArray(media)) return [];
     if (media.length > 0) {
       const normalized = media.map(normalizeAniListMedia);
-      anilistSearchCache.set(cacheKey, { data: normalized, expiresAt: now + SEARCH_CACHE_TTL_MS });
+      setCacheEntry(cacheKey, normalized, SUCCESS_TTL_MS);
       return normalized;
     }
 
@@ -243,18 +278,51 @@ export async function searchAniListTitles({ q, type, status, genre, sort, page =
         body: JSON.stringify({ query: retryQuery, variables: retryVariables }),
         signal: controller.signal,
       });
-      if (!retryResponse.ok) return [];
+      if (!retryResponse.ok) {
+        if (retryResponse.status === 429) {
+          setCacheEntry(cacheKey, [], RATE_LIMIT_TTL_MS);
+          setGlobalCooldown(RATE_LIMIT_TTL_MS);
+          const err = new Error(`AniList request failed with HTTP ${retryResponse.status}`);
+          err.code = "ANILIST_RATE_LIMITED";
+          throw err;
+        }
+        return [];
+      }
       const retryPayload = await retryResponse.json();
       const retryMedia = retryPayload?.data?.Page?.media;
       if (!Array.isArray(retryMedia)) return [];
       const normalized = retryMedia.map(normalizeAniListMedia);
-      anilistSearchCache.set(cacheKey, { data: normalized, expiresAt: now + SEARCH_CACHE_TTL_MS });
+      setCacheEntry(cacheKey, normalized, normalized.length > 0 ? SUCCESS_TTL_MS : EMPTY_TTL_MS);
       return normalized;
     }
 
-    anilistSearchCache.set(cacheKey, { data: [], expiresAt: now + SEARCH_CACHE_TTL_MS });
+    setCacheEntry(cacheKey, [], EMPTY_TTL_MS);
     return [];
+  } catch (error) {
+    if (error?.code === "ANILIST_RATE_LIMITED" || String(error?.message || "").includes("HTTP 429")) {
+      setCacheEntry(cacheKey, [], RATE_LIMIT_TTL_MS);
+      setGlobalCooldown(RATE_LIMIT_TTL_MS);
+    } else {
+      setCacheEntry(cacheKey, [], FAILURE_TTL_MS);
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }
+};
+
+export async function searchAniListTitles({ q, type, status, genre, sort, page = 1, perPage = 16 } = {}) {
+  const cacheKey = getCacheKey({ q, type, status, genre, sort, page, perPage });
+  const cached = anilistSearchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
+  if (inFlightSearches.has(cacheKey)) {
+    return inFlightSearches.get(cacheKey);
+  }
+
+  const runPromise = runAniListSearch({ q, type, status, genre, sort, page, perPage, cacheKey }).finally(() => {
+    inFlightSearches.delete(cacheKey);
+  });
+  inFlightSearches.set(cacheKey, runPromise);
+  return runPromise;
 }
