@@ -23,9 +23,10 @@ export default function AIAssistant({ lib, isMobile = false }) {
     try {
       const aiResponse = await aiService.chat({
         message: content,
-        context: { spoiler_free: spoiler, recent_titles: recentTitles, library_size: lib.length },
+        spoilerSafe: spoiler,
+        context: { recent_titles: recentTitles, library_size: lib.length },
       });
-      const reply = aiResponse?.data?.reply || "Error getting response.";
+      const reply = aiResponse?.data?.reply || aiResponse?.message || "Error getting response.";
       const updated = [...newMessages, { role: "ai", content: reply }];
       setMessages(updated);
       saveChat(updated);
@@ -46,7 +47,7 @@ export default function AIAssistant({ lib, isMobile = false }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 10, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 900, fontSize: isMobile ? 28 : 34, color: "#f0ebff", margin: "0 0 4px" }}>AI Assistant</h1>
-            <p style={{ fontSize: isMobile ? 12 : 13, color: "#7a6b84", margin: 0 }}>Powered by Claude - Your personal anime sage</p>
+            <p style={{ fontSize: isMobile ? 12 : 13, color: "#7a6b84", margin: 0 }}>Powered by Gemini - Your personal anime sage</p>
           </div>
           <button onClick={() => setSpoiler((v) => !v)} style={{ padding: "8px 16px", minHeight: 40, borderRadius: 99, fontSize: 11, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", border: `1px solid ${spoiler ? "rgba(34,211,238,0.5)" : "rgba(255,255,255,0.12)"}`, background: spoiler ? "rgba(34,211,238,0.1)" : "rgba(255,255,255,0.04)", color: spoiler ? "#22d3ee" : "#7a6b84", transition: "all 0.25s", boxShadow: spoiler ? "0 0 12px rgba(34,211,238,0.2)" : "none" }}>
             {spoiler ? "Spoiler-Free ON" : "Spoilers Allowed"}
@@ -100,8 +101,8 @@ export default function AIAssistant({ lib, isMobile = false }) {
           </GlassCard>
           <GlassCard hover={false} style={{ padding: 18 }} delay={150}>
             <p style={{ fontSize: 10, color: "#22d3ee", fontWeight: 700, letterSpacing: "0.15em", marginBottom: 10 }}>AI STATUS</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span className="status-dot" style={{ width: 8, height: 8, borderRadius: 99, background: "#4ade80", display: "block" }} /><span style={{ fontSize: 12, color: "#4ade80" }}>Connected to Claude</span></div>
-            <p style={{ fontSize: 11, color: "#7a6b84", marginTop: 6 }}>Powered by Claude Sonnet</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span className="status-dot" style={{ width: 8, height: 8, borderRadius: 99, background: "#4ade80", display: "block" }} /><span style={{ fontSize: 12, color: "#4ade80" }}>Connected to Gemini</span></div>
+            <p style={{ fontSize: 11, color: "#7a6b84", marginTop: 6 }}>Powered by Gemini Flash</p>
           </GlassCard>
           <GlassCard hover={false} style={{ padding: 18 }} delay={200}>
             <p style={{ fontSize: 10, color: "#fbbf24", fontWeight: 700, letterSpacing: "0.15em", marginBottom: 8 }}>TIPS</p>

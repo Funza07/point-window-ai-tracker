@@ -9,6 +9,7 @@ import { similarTitlesService } from "../services/titles.service.js";
 import { getTitleByIdService } from "../services/titles.service.js";
 import { getTitleById } from "../services/titleCache.service.js";
 import { mockTitles } from "../data/mockTitles.js";
+import { getAiProviderStatus } from "../services/aiProvider.service.js";
 
 const r = Router();
 
@@ -122,6 +123,17 @@ r.get("/title/:id", async (req, res) => {
   const data = await getTitleByIdService(id);
   const foundIn = fromMock ? "mock" : fromCache ? "cache" : id.startsWith("anilist-") && data ? "anilist" : "none";
   res.json({ success: true, foundIn, data: data || null });
+});
+
+r.get("/ai", (_req, res) => {
+  const status = getAiProviderStatus();
+  res.json({
+    success: true,
+    providerConfigured: status.providerConfigured,
+    provider: status.provider,
+    model: status.model,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 export default r;

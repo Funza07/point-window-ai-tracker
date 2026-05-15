@@ -33,18 +33,123 @@ const commonTerms = [
   "spy x family",
 ];
 
-const seedQueries = [
+const CURATED_ANIME_TERMS = [
+  "dragon ball z",
+  "naruto",
+  "one piece",
+  "attack on titan",
+  "death note",
+  "fullmetal alchemist brotherhood",
+  "sword art online",
+  "my hero academia",
+  "demon slayer",
+  "tokyo ghoul",
+  "hunter x hunter",
+  "bleach",
+  "fairy tail",
+  "one punch man",
+  "re zero",
+  "steins gate",
+  "code geass",
+  "neon genesis evangelion",
+  "cowboy bebop",
+  "spirited away",
+  "your lie in april",
+  "violet evergarden",
+  "fruits basket",
+  "overlord",
+  "black clover",
+  "jujutsu kaisen",
+  "vinland saga",
+  "mob psycho 100",
+  "the promised neverland",
+  "haikyuu",
+  "toradora",
+  "clannad",
+  "sword art online alicization",
+  "no game no life",
+  "gurren lagann",
+  "ao no exorcist",
+  "soul eater",
+  "danmachi",
+  "food wars",
+  "tokyo revengers",
+  "assassination classroom",
+  "dr stone",
+  "parasyte",
+  "erased",
+  "charlotte",
+  "that time i got reincarnated as a slime",
+  "konosuba",
+  "sword art online progressive",
+  "mushoku tensei",
+  "black butler",
+  "kaiba",
+  "tatami galaxy",
+  "ping pong the animation",
+  "uchouten kazoku",
+  "haibane renmei",
+  "nhk ni youkoso",
+  "planetes",
+  "kemono no souja erin",
+  "showa genroku rakugo shinjuu",
+  "dennou coil",
+  "texhnolyze",
+  "casshern sins",
+  "shin sekai yori",
+  "jinrui wa suitai shimashita",
+  "mawaru penguindrum",
+  "ryuu to freckles",
+  "kino's journey 2003",
+  "now and then here and there",
+  "patlabor 2",
+  "bartender",
+  "mushishi zoku shou",
+  "hidamari sketch",
+  "aria the animation",
+  "yokohama kaidashi kikou ova",
+  "koi kaze",
+  "gankutsuou",
+  "kyousougiga",
+  "usagi drop",
+  "house of five leaves",
+  "kuuchuu buranko",
+  "eve no jikan",
+  "the big o",
+  "ghost hound",
+  "kouya no kotobuki hikoutai",
+  "tsurune",
+  "yojouhan shinwa taikei",
+  "sketchbook full color's",
+  "seirei moribito",
+  "patlabor the movie",
+  "cat soup ova",
+  "iroduku the world in colors",
+  "shigofumi",
+  "wandering son",
+  "bokura no",
+  "kemono no souja erin",
+  "alien 9",
+  "petshop of horrors",
+  "genshiken",
+  "ristorante paradiso",
+  "kamichu",
+];
+
+const baseQueries = [
   { name: "popular-anime", params: { q: "", type: "Anime", sort: "Popularity", page: 1, perPage: 16 } },
   { name: "popular-manga", params: { q: "", type: "Manga", sort: "Popularity", page: 1, perPage: 16 } },
   { name: "trending-anime", params: { q: "", type: "Anime", sort: "Latest", page: 1, perPage: 16 } },
   { name: "trending-manga", params: { q: "", type: "Manga", sort: "Latest", page: 1, perPage: 16 } },
   { name: "top-rated-anime", params: { q: "", type: "Anime", sort: "Rating", page: 1, perPage: 16 } },
   { name: "top-rated-manga", params: { q: "", type: "Manga", sort: "Rating", page: 1, perPage: 16 } },
-  ...commonTerms.map((term) => ({
+];
+
+const makeSearchQueries = (terms) =>
+  terms.map((term) => ({
     name: `search-${term.replace(/\s+/g, "-")}`,
     params: { q: term, sort: "Popularity", page: 1, perPage: 16 },
-  })),
-];
+  }));
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -53,6 +158,8 @@ const parseFlags = () => {
   return {
     limitSmall: args.includes("--limit-small"),
     dryRun: args.includes("--dry-run"),
+    curatedAnime: args.includes("--curated-anime"),
+    curatedAnimeOnly: args.includes("--curated-anime-only"),
   };
 };
 
@@ -73,7 +180,7 @@ const isRateLimitError = (error) => {
 };
 
 async function main() {
-  const { limitSmall, dryRun } = parseFlags();
+  const { limitSmall, dryRun, curatedAnime, curatedAnimeOnly } = parseFlags();
 
   if (!isDbConfigured()) {
     console.error("[seed:titles] Database is not configured. Set DB_HOST, DB_USER, DB_NAME, and related env vars.");
@@ -86,9 +193,32 @@ async function main() {
     process.exit(1);
   }
 
-  const queries = limitSmall
-    ? seedQueries.filter((q) => q.name.startsWith("popular-") || q.name === "search-one-piece" || q.name === "search-solo-leveling").slice(0, 5)
-    : seedQueries;
+  const includeCurated = curatedAnime || curatedAnimeOnly;
+  const curatedSmallTerms = CURATED_ANIME_TERMS.slice(0, 8);
+
+  let queries = [];
+  if (curatedAnimeOnly) {
+    const curatedTerms = limitSmall ? curatedSmallTerms : CURATED_ANIME_TERMS;
+    queries = makeSearchQueries(curatedTerms);
+  } else {
+    queries = [
+      ...baseQueries,
+      ...makeSearchQueries(commonTerms),
+      ...(includeCurated ? makeSearchQueries(CURATED_ANIME_TERMS) : []),
+    ];
+
+    if (limitSmall) {
+      queries = queries
+        .filter((q) => q.name.startsWith("popular-") || q.name === "search-one-piece" || q.name === "search-solo-leveling")
+        .slice(0, 5);
+    }
+  }
+
+  const queryMap = new Map();
+  for (const query of queries) {
+    queryMap.set(query.name, query);
+  }
+  queries = [...queryMap.values()];
 
   console.log(`[seed:titles] Starting seed run with ${queries.length} queries.${dryRun ? " (dry-run)" : ""}`);
 
