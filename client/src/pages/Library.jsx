@@ -25,7 +25,7 @@ export default function Library({ lib, setLib, setPage, setDetailTitle, onRemove
   };
 
   return (
-    <div className="page-enter" style={{ paddingBottom: isMobile ? 90 : 0 }}>
+    <div className="page-enter" style={{ paddingBottom: isMobile ? 90 : 0, maxWidth: "100%", overflowX: "hidden", boxSizing: "border-box" }}>
       <div style={{ marginBottom: isMobile ? 18 : 24 }}>
         <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 900, fontSize: isMobile ? 28 : 34, color: "#f0ebff", margin: "0 0 4px" }}>My Library</h1>
         <p style={{ fontSize: isMobile ? 12 : 13, color: "#7a6b84", margin: 0 }}>Track progress, saved links, and status updates</p>
@@ -61,14 +61,14 @@ export default function Library({ lib, setLib, setPage, setDetailTitle, onRemove
       ) : filtered.length === 0 ? (
         <p style={{ color: "#7a6b84", fontSize: 13 }}>No titles match this filter.</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, maxWidth: "100%" }}>
           {filtered.map(({ item, title }, i) => {
             const c = typeColor(title.type);
             const pct = title.total ? Math.round((item.progress / title.total) * 100) : 0;
             return (
-              <GlassCard key={title.id} style={{ padding: isMobile ? 12 : 14, display: "flex", gap: 12 }} delay={i * 50}>
+              <GlassCard key={title.id} style={{ padding: isMobile ? 12 : 14, display: "flex", gap: 12, width: "100%", boxSizing: "border-box", maxWidth: "100%" }} delay={i * 50}>
                 <img src={title.cover} alt={title.title} style={{ width: isMobile ? 56 : 60, height: isMobile ? 78 : 82, objectFit: "cover", borderRadius: 10, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, maxWidth: "100%" }}>
                   <p style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 15, color: "#f0ebff", margin: "0 0 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title.title}</p>
                   <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
                     <Badge color={c}>{title.type}</Badge>

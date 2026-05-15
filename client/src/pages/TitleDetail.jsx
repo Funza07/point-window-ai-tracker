@@ -100,7 +100,7 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
   }, [resolvedTitle.id]);
 
   return (
-    <div className="page-enter" style={{ display: "flex", flexDirection: "column", gap: isMobile ? 16 : 22, paddingBottom: isMobile ? 90 : 0 }}>
+    <div className="page-enter" style={{ display: "flex", flexDirection: "column", gap: isMobile ? 16 : 22, paddingBottom: isMobile ? 90 : 0, maxWidth: "100%", overflowX: "hidden", boxSizing: "border-box" }}>
       <button
         onClick={() => setPage("discover")}
         style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#7a6b84", cursor: "pointer", fontFamily: "inherit", fontSize: 13, padding: 0, transition: "color 0.2s" }}
@@ -200,3 +200,4 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
     </div>
   );
 }
+

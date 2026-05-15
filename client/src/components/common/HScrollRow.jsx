@@ -7,6 +7,8 @@
         gap,
         overflowX: "auto",
         overflowY: "hidden",
+        maxWidth: "100%",
+        boxSizing: "border-box",
         WebkitOverflowScrolling: "touch",
         scrollSnapType: "x proximity",
         paddingBottom: 2,

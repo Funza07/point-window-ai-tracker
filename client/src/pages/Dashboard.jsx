@@ -59,7 +59,7 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd,
   }, []);
 
   return (
-    <div className="page-enter" style={{ display: "flex", flexDirection: "column", gap: isMobile ? 20 : 32, paddingBottom: isMobile ? 90 : 0 }}>
+    <div className="page-enter" style={{ display: "flex", flexDirection: "column", gap: isMobile ? 20 : 32, paddingBottom: isMobile ? 90 : 0, maxWidth: "100%", overflowX: "hidden", boxSizing: "border-box" }}>
       <div style={{ position: "relative" }}>
         <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: searchFocus ? "#a855f7" : "#7a6b84", transition: "color 0.2s" }}>Q</span>
         <input
@@ -210,7 +210,7 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd,
           <SectionHeader title="Recommended For You" sub="AI-curated picks from your taste profile" action={{ label: "See all", fn: () => setPage("recommendations") }} delay={200} />
           {isMobile ? (
             <HScrollRow gap={12}>
-              {catalog.slice(4, 10).map((t, i) => <TitleCard key={t.id} title={{ ...t, cover: t?.cover || t?.banner || FALLBACK_IMAGE, genres: Array.isArray(t?.genres) ? t.genres : [] }} lib={lib} onAdd={handleAdd} onView={onView} delay={i * 60 + 250} width={148} />)}
+              {catalog.slice(4, 10).map((t, i) => <TitleCard key={t.id} title={{ ...t, cover: t?.cover || t?.banner || FALLBACK_IMAGE, genres: Array.isArray(t?.genres) ? t.genres : [] }} lib={lib} onAdd={handleAdd} onView={onView} delay={i * 60 + 250} width={160} />)}
             </HScrollRow>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))", gap: 14 }}>
@@ -222,4 +222,5 @@ export default function Dashboard({ lib, setLib, setPage, setDetailTitle, onAdd,
     </div>
   );
 }
+
 
