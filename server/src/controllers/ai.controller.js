@@ -30,13 +30,15 @@ const sendAiResult = async ({ res, mode, userId, prompt, titleId, title, spoiler
     });
 
     if (!result.ok && result.code === "AI_NOT_CONFIGURED") {
-      return res.status(200).json({ success: false, message: "AI provider is not configured" });
+      return res.status(200).json({ success: false, code: "AI_NOT_CONFIGURED", message: "AI provider is not configured", provider: "gemini" });
     }
 
     if (!result.ok) {
       return res.status(200).json({
         success: false,
+        code: result.code || "AI_PROVIDER_ERROR",
         message: result.message || "AI response unavailable right now",
+        provider: "gemini",
       });
     }
 
@@ -48,11 +50,19 @@ const sendAiResult = async ({ res, mode, userId, prompt, titleId, title, spoiler
         model: result.model,
       },
     });
-  } catch {
-    return res.status(200).json({
+  } catch (error) {
+    const isDev = String(process.env.NODE_ENV || "").toLowerCase() !== "production";
+    const payload = {
       success: false,
-      message: "AI response unavailable right now",
-    });
+      code: error?.code || "AI_PROVIDER_ERROR",
+      message: error?.safeMessage || error?.message || "AI response unavailable right now",
+      provider: "gemini",
+    };
+    if (isDev) {
+      payload.debugStatus = error?.status || null;
+      payload.debugProviderMessage = error?.providerMessage || null;
+    }
+    return res.status(200).json(payload);
   }
 };
 

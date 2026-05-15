@@ -132,6 +132,7 @@ r.get("/ai", (_req, res) => {
     providerConfigured: status.providerConfigured,
     provider: status.provider,
     model: status.model,
+    cooldownActive: Boolean(status.cooldownActive),
     timestamp: new Date().toISOString(),
   });
 });

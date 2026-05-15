@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { getAniListSearchStatus } from "./anilist.service.js";
 
 const DEFAULT_MODEL = "gemini-2.0-flash";
 
@@ -13,6 +14,7 @@ export const getAiProviderStatus = () => ({
   providerConfigured: isProviderConfigured(),
   provider: "gemini",
   model: resolveModel(),
+  cooldownActive: Boolean(getAniListSearchStatus()?.cooldownActive),
 });
 
 const fallbackReply = ({ spoilerSafe = true }) =>
@@ -58,12 +60,47 @@ export async function generateAiResponse({ systemPrompt = "", userPrompt = "", c
     }),
   });
 
-  if (response.status === 429) {
-    return { ok: false, code: "AI_RATE_LIMITED", message: "AI provider is temporarily rate-limited" };
-  }
-
   if (!response.ok) {
-    return { ok: false, code: "AI_PROVIDER_ERROR", message: "AI provider request failed" };
+    const status = Number(response.status) || 500;
+    const rawText = await response.text().catch(() => "");
+    let parsed = null;
+    try {
+      parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      parsed = null;
+    }
+
+    const providerStatus = String(parsed?.error?.status || "").trim() || null;
+    const providerMessage = String(parsed?.error?.message || "").trim() || null;
+    const providerCode = parsed?.error?.code ?? null;
+
+    console.error("[aiProvider] Gemini request failed", {
+      status,
+      providerStatus,
+      providerCode,
+      providerMessage,
+    });
+
+    let code = "AI_PROVIDER_ERROR";
+    if (status === 429) code = "AI_RATE_LIMITED";
+    else if (status === 401 || status === 403) code = "AI_AUTH_ERROR";
+    else if (status === 404) code = "AI_MODEL_NOT_FOUND";
+    else if (status === 400) code = "AI_BAD_REQUEST";
+
+    let safeMessage = "AI provider request failed";
+    if (code === "AI_RATE_LIMITED") safeMessage = "AI provider is temporarily rate-limited";
+    else if (code === "AI_AUTH_ERROR") safeMessage = "AI provider authentication failed";
+    else if (code === "AI_MODEL_NOT_FOUND") safeMessage = "Configured Gemini model was not found";
+    else if (code === "AI_BAD_REQUEST") safeMessage = "AI provider rejected request format";
+
+    const error = new Error(safeMessage);
+    error.code = code;
+    error.status = status;
+    error.safeMessage = safeMessage;
+    error.providerMessage = providerMessage || null;
+    error.providerStatus = providerStatus || null;
+    error.providerCode = providerCode;
+    throw error;
   }
 
   const data = await response.json().catch(() => null);

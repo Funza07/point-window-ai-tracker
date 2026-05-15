@@ -14,6 +14,14 @@ export default function AIAssistant({ lib, isMobile = false }) {
   const prompts = ["Recommend something like Solo Leveling", "What should I read next?", "Best short completed anime?", "Manhwa with OP MC", "Compare AoT vs Death Note"];
   const recentTitles = lib.slice(0, 3).map((x) => mockTitles.find((t) => t.id === x.id)?.title).filter(Boolean);
 
+  const getSafeAiErrorMessage = (code) => {
+    if (code === "AI_MODEL_NOT_FOUND") return "The selected Gemini model is not available. Please change GEMINI_MODEL.";
+    if (code === "AI_RATE_LIMITED") return "Gemini is rate-limited right now. Try again in a minute.";
+    if (code === "AI_AUTH_ERROR") return "AI key/authentication failed. Check backend settings.";
+    if (code === "AI_BAD_REQUEST") return "AI request format needs fixing.";
+    return "AI provider request failed.";
+  };
+
   const send = async (content) => {
     if (!content.trim() || loading) return;
     const newMessages = [...messages, { role: "user", content }];
@@ -26,7 +34,9 @@ export default function AIAssistant({ lib, isMobile = false }) {
         spoilerSafe: spoiler,
         context: { recent_titles: recentTitles, library_size: lib.length },
       });
-      const reply = aiResponse?.data?.reply || aiResponse?.message || "Error getting response.";
+      const reply = aiResponse?.success
+        ? (aiResponse?.data?.reply || "Error getting response.")
+        : getSafeAiErrorMessage(aiResponse?.code);
       const updated = [...newMessages, { role: "ai", content: reply }];
       setMessages(updated);
       saveChat(updated);
