@@ -1,4 +1,6 @@
-export default function Sidebar({ NAV, page, lib, navigate }) {
+export default function Sidebar({ NAV, page, lib, navigate, isMobile = false }) {
+  if (isMobile) return null;
+
   return (
     <aside style={{
       position:"fixed", left:0, top:0, bottom:0, width:226,

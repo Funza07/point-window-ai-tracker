@@ -10,9 +10,11 @@ import TitleDetail from "./pages/TitleDetail";
 import { NAV } from "./data/navItems";
 import { getLib } from "./utils/storageUtils";
 import { libraryService } from "./services/libraryService";
+import useIsMobile from "./hooks/useIsMobile";
 // ?? Animated Orb Background ???????????????????????????????????????????????????????????????????????????????????
 // â”€â”€â”€ Main App Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function App() {
+  const isMobile = useIsMobile(768);
   const [page, setPage] = useState("dashboard");
   const [lib, setLib] = useState(getLib);
   const [detailTitle, setDetailTitle] = useState(null);
@@ -50,13 +52,13 @@ export default function App() {
   };
 
   const renderPage = () => {
-    if (page === "detail" && detailTitle) return <TitleDetail title={detailTitle} lib={lib} setLib={setLib} setPage={setPage} onSave={updateLibraryItem} onAdd={addToLibrary} onOpenLink={openLibraryLink} />;
-    if (page === "discover") return <Discover lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} />;
-    if (page === "library") return <Library lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onRemove={removeFromLibrary} onOpenLink={openLibraryLink} />;
-    if (page === "recommendations") return <Recommendations lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} />;
-    if (page === "ai") return <AIAssistant lib={lib} />;
+    if (page === "detail" && detailTitle) return <TitleDetail isMobile={isMobile} title={detailTitle} lib={lib} setLib={setLib} setPage={setPage} onSave={updateLibraryItem} onAdd={addToLibrary} onOpenLink={openLibraryLink} />;
+    if (page === "discover") return <Discover isMobile={isMobile} lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} />;
+    if (page === "library") return <Library isMobile={isMobile} lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onRemove={removeFromLibrary} onOpenLink={openLibraryLink} />;
+    if (page === "recommendations") return <Recommendations isMobile={isMobile} lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} />;
+    if (page === "ai") return <AIAssistant isMobile={isMobile} lib={lib} />;
     if (page === "settings") return <Settings />;
-    return <Dashboard lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} onOpenLink={openLibraryLink} />;
+    return <Dashboard isMobile={isMobile} lib={lib} setLib={setLib} setPage={setPage} setDetailTitle={setDetailTitle} onAdd={addToLibrary} onOpenLink={openLibraryLink} />;
   };
 
   return (
@@ -206,7 +208,7 @@ export default function App() {
         .user-badge:hover { transform: translateX(2px); }
       `}</style>
 
-      <AppShell NAV={NAV} page={page} lib={lib} navigate={navigate}>
+      <AppShell isMobile={isMobile} NAV={NAV} page={page} lib={lib} navigate={navigate}>
         {renderPage()}
       </AppShell>
     </>
