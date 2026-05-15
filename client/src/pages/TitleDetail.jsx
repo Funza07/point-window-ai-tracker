@@ -7,7 +7,7 @@ import StarRating from "../components/common/StarRating";
 import ProgressBar from "../components/common/ProgressBar";
 import Btn from "../components/common/Button";
 import SectionHeader from "../components/common/SectionHeader";
-import { typeColor, typeGlow } from "../utils/titleUtils";
+import { progressLabel, typeColor, typeGlow } from "../utils/titleUtils";
 import { upsertItem } from "../utils/storageUtils";
 import { titleService } from "../services/titleService";
 import { buildLibraryPayload } from "../utils/libraryTitle";
@@ -15,7 +15,7 @@ import { buildLibraryPayload } from "../utils/libraryTitle";
 export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd, onOpenLink }) {
   const [resolvedTitle, setResolvedTitle] = useState(title);
   const [form, setForm] = useState(() => {
-    const item = lib.find((x) => x.id === title.id);
+    const item = lib.find((x) => x.id === title.id) || title.__library;
     if (!item) return { status: "Planning", progress: 0, score: "", notes: "", link: "" };
     return {
       status: item.userStatus || item.status || "Planning",
@@ -25,11 +25,13 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
       link: item.link || "",
     };
   });
+
   const [saved, setSaved] = useState("");
   const c = typeColor(resolvedTitle.type);
   const pct = resolvedTitle.total ? Math.round(((form.progress || 0) / resolvedTitle.total) * 100) : 0;
+  const resolvedGenres = Array.isArray(resolvedTitle.genres) ? resolvedTitle.genres : [];
   const localSimilar = mockTitles
-    .filter((t) => t.id !== resolvedTitle.id && (t.type === resolvedTitle.type || t.genres.some((g) => resolvedTitle.genres.includes(g))))
+    .filter((t) => t.id !== resolvedTitle.id && (t.type === resolvedTitle.type || (Array.isArray(t.genres) && t.genres.some((g) => resolvedGenres.includes(g)))))
     .slice(0, 6);
   const [similar, setSimilar] = useState(localSimilar);
 
@@ -68,15 +70,13 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const hasMetadata = Boolean(title?.title && title?.cover && title?.type);
+      const hasMetadata = Boolean(title?.title && title?.cover && title?.type && title?.synopsis);
       if (hasMetadata) {
         setResolvedTitle(title);
         return;
       }
-      if (String(title?.id || "").startsWith("anilist-")) {
-        const res = await titleService.getById(title.id);
-        if (mounted && res?.data) setResolvedTitle((prev) => ({ ...prev, ...res.data }));
-      }
+      const res = await titleService.getById(title.id);
+      if (mounted && res?.data) setResolvedTitle((prev) => ({ ...prev, ...res.data }));
     })();
     return () => {
       mounted = false;
@@ -143,7 +143,7 @@ export default function TitleDetail({ title, lib, setLib, setPage, onSave, onAdd
             </select>
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <span style={{ fontSize: 11, color: "#7a6b84" }}>Current {resolvedTitle.type === "Anime" ? "Episode" : "Chapter"} (of {resolvedTitle.total})</span>
+            <span style={{ fontSize: 11, color: "#7a6b84" }}>Current {progressLabel(resolvedTitle.type)} (of {resolvedTitle.total})</span>
             <input type="number" min={0} max={resolvedTitle.total} value={form.progress} onChange={(e) => setForm({ ...form, progress: e.target.value })} style={{ padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#f0ebff", fontSize: 13, fontFamily: "inherit", width: "100%", outline: "none", boxSizing: "border-box" }} />
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>

@@ -2,6 +2,7 @@ import { apiClient } from "./apiClient";
 import { mockTitles } from "../data/mockTitles";
 
 const normalize = (v = "") => String(v).trim().toLowerCase();
+const toGenres = (value) => (Array.isArray(value) ? value : []);
 
 const localSearch = (params = {}) => {
   const q = normalize(params.q);
@@ -64,7 +65,7 @@ export const titleService = {
       const base = mockTitles.find((x) => x.id === id);
       const data = mockTitles
         .filter((x) => x.id !== id)
-        .filter((x) => (base ? x.type === base.type || x.genres.some((g) => base.genres.includes(g)) : true))
+        .filter((x) => (base ? x.type === base.type || toGenres(x.genres).some((g) => toGenres(base.genres).includes(g)) : true))
         .slice(0, 6);
       return { success: true, data, source: "local" };
     }

@@ -6,6 +6,9 @@ import { getAniListSearchStatus } from "../services/anilist.service.js";
 import { getTitleCacheCount } from "../services/titleCache.service.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { similarTitlesService } from "../services/titles.service.js";
+import { getTitleByIdService } from "../services/titles.service.js";
+import { getTitleById } from "../services/titleCache.service.js";
+import { mockTitles } from "../data/mockTitles.js";
 
 const r = Router();
 
@@ -91,6 +94,16 @@ r.get("/anilist-status", async (_req, res) => {
     ...(status.cooldownUntil ? { cooldownUntil: status.cooldownUntil } : {}),
     timestamp: new Date().toISOString(),
   });
+});
+
+r.get("/title/:id", async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.json({ success: true, foundIn: "none", data: null });
+  const fromMock = mockTitles.find((t) => t.id === id) || null;
+  const fromCache = await getTitleById(id);
+  const data = await getTitleByIdService(id);
+  const foundIn = fromMock ? "mock" : fromCache ? "cache" : id.startsWith("anilist-") && data ? "anilist" : "none";
+  res.json({ success: true, foundIn, data: data || null });
 });
 
 export default r;

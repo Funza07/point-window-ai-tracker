@@ -18,7 +18,7 @@ export default function Library({ lib, setLib, setPage, setDetailTitle, onRemove
     done: rows.filter((x) => (x.item.userStatus || x.item.status) === "Completed").length,
     planned: rows.filter((x) => (x.item.userStatus || x.item.status) === "Planning").length,
   };
-  const onView = (t) => { setDetailTitle(t); setPage("detail"); };
+  const onView = (t, item) => { setDetailTitle({ ...t, __library: item }); setPage("detail"); };
 
   return (
     <div className="page-enter">
@@ -68,7 +68,7 @@ export default function Library({ lib, setLib, setPage, setDetailTitle, onRemove
                   <ProgressBar pct={pct} color={c} />
                   {item.score && <p style={{ fontSize:11, color:"#fbbf24", margin:"4px 0 0" }}>★ {item.score}/10</p>}
                   <div style={{ display:"flex", gap:6, marginTop:8, flexWrap:"wrap" }}>
-                    <Btn small onClick={() => onView(title)}>Details</Btn>
+                    <Btn small onClick={() => onView(title, item)}>Details</Btn>
                     <Btn small variant="ghost" onClick={() => onRemove ? onRemove(title.id) : setLib(removeItem(title.id, lib))} style={{ color:"#f87171" }}>Remove</Btn>
                     {item.link && <Btn small variant="cyan" onClick={async () => { if (onOpenLink) await onOpenLink(title.id); window.open(item.link, "_blank"); }}>▶</Btn>}
                   </div>

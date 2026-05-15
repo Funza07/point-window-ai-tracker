@@ -139,6 +139,12 @@ export const getAniListSearchStatus = () => ({
   cooldownUntil: isCooldownActive() ? new Date(globalCooldownUntil).toISOString() : null,
 });
 
+const parseAniListError = (response) => {
+  const err = new Error(`AniList request failed with HTTP ${response.status}`);
+  err.code = response.status === 429 ? "ANILIST_RATE_LIMITED" : "ANILIST_HTTP_ERROR";
+  return err;
+};
+
 const runAniListSearch = async ({ q, type, status, genre, sort, page = 1, perPage = 16, cacheKey }) => {
   if (isCooldownActive()) {
     const cooldownError = new Error("AniList cooling down");
@@ -223,9 +229,7 @@ const runAniListSearch = async ({ q, type, status, genre, sort, page = 1, perPag
     });
 
     if (!response.ok) {
-      const err = new Error(`AniList request failed with HTTP ${response.status}`);
-      err.code = response.status === 429 ? "ANILIST_RATE_LIMITED" : "ANILIST_HTTP_ERROR";
-      throw err;
+      throw parseAniListError(response);
     }
 
     const payload = await response.json();
@@ -310,6 +314,95 @@ const runAniListSearch = async ({ q, type, status, genre, sort, page = 1, perPag
     clearTimeout(timer);
   }
 };
+
+export async function getAniListTitleById(id) {
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId) || numericId <= 0) return null;
+
+  const cacheKey = `anilist:id:${Math.floor(numericId)}`;
+  const cached = anilistSearchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data?.[0] || null;
+
+  if (inFlightSearches.has(cacheKey)) {
+    const cachedResult = await inFlightSearches.get(cacheKey);
+    return cachedResult?.[0] || null;
+  }
+
+  const runPromise = (async () => {
+    if (isCooldownActive()) {
+      const cooldownError = new Error("AniList cooling down");
+      cooldownError.code = "ANILIST_COOLDOWN";
+      throw cooldownError;
+    }
+
+    const query = `
+      query MediaById($id: Int) {
+        Media(id: $id) {
+          id
+          idMal
+          title { romaji english native userPreferred }
+          type
+          status
+          description(asHtml: false)
+          coverImage { large extraLarge color }
+          bannerImage
+          episodes
+          chapters
+          averageScore
+          popularity
+          genres
+          seasonYear
+          countryOfOrigin
+          siteUrl
+        }
+      }
+    `;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(ANILIST_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ query, variables: { id: Math.floor(numericId) } }),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw parseAniListError(response);
+
+      const payload = await response.json();
+      if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+        const err = new Error(payload.errors[0]?.message || "AniList GraphQL error");
+        err.code = "ANILIST_GRAPHQL_ERROR";
+        throw err;
+      }
+
+      const media = payload?.data?.Media;
+      if (!media) {
+        setCacheEntry(cacheKey, [], EMPTY_TTL_MS);
+        return [];
+      }
+      const normalized = [normalizeAniListMedia(media)];
+      setCacheEntry(cacheKey, normalized, SUCCESS_TTL_MS);
+      return normalized;
+    } catch (error) {
+      if (error?.code === "ANILIST_RATE_LIMITED" || String(error?.message || "").includes("HTTP 429")) {
+        setCacheEntry(cacheKey, [], RATE_LIMIT_TTL_MS);
+        setGlobalCooldown(RATE_LIMIT_TTL_MS);
+      } else {
+        setCacheEntry(cacheKey, [], FAILURE_TTL_MS);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  })().finally(() => {
+    inFlightSearches.delete(cacheKey);
+  });
+
+  inFlightSearches.set(cacheKey, runPromise);
+  const result = await runPromise;
+  return result?.[0] || null;
+}
 
 export async function searchAniListTitles({ q, type, status, genre, sort, page = 1, perPage = 16 } = {}) {
   const cacheKey = getCacheKey({ q, type, status, genre, sort, page, perPage });

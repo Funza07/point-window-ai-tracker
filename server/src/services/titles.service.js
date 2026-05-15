@@ -1,6 +1,6 @@
 import { mockTitles } from "../data/mockTitles.js";
-import { searchAniListTitles } from "./anilist.service.js";
-import { getTitleById } from "./titleCache.service.js";
+import { getAniListTitleById, searchAniListTitles } from "./anilist.service.js";
+import { getAllCachedTitles, getTitleById, upsertTitleSnapshot } from "./titleCache.service.js";
 
 const normalize = (v = "") => String(v).trim().toLowerCase();
 const toText = (v = "") => String(v ?? "").trim();
@@ -110,7 +110,22 @@ export const getTitleByIdService = async (id) => {
   const normalizedId = toText(id);
   const fromMock = mockTitles.find((t) => toText(t?.id) === normalizedId) || null;
   if (fromMock) return fromMock;
-  return getTitleById(normalizedId);
+
+  const fromCache = await getTitleById(normalizedId);
+  if (fromCache) return normalizeTitleShape(fromCache);
+
+  if (normalizedId.startsWith("anilist-")) {
+    const externalId = Number(normalizedId.replace("anilist-", ""));
+    if (Number.isFinite(externalId) && externalId > 0) {
+      const fromAniList = await getAniListTitleById(externalId);
+      if (fromAniList) {
+        await upsertTitleSnapshot(fromAniList);
+        return normalizeTitleShape(fromAniList);
+      }
+    }
+  }
+
+  return null;
 };
 
 export const similarTitlesService = async (id, limit = 6) => {
@@ -122,9 +137,13 @@ export const similarTitlesService = async (id, limit = 6) => {
   const baseType = normalize(base.type);
   const baseGenres = normalizeGenres(base.genres);
 
-  return mockTitles
+  const cachedTitles = await getAllCachedTitles(250);
+  const candidateTitles = [...mockTitles, ...cachedTitles];
+
+  return candidateTitles
     .map(normalizeTitleShape)
     .filter((t) => t.id && t.id !== normalizedId)
+    .filter((t, index, arr) => arr.findIndex((x) => x.id === t.id) === index)
     .filter((t) => {
       const sameType = baseType && normalize(t.type) === baseType;
       const genreMatch = safeIncludesGenre(baseGenres, t.genres);

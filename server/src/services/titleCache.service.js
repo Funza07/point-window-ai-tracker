@@ -170,3 +170,19 @@ export const getTitleCacheCount = async () => {
   }
   return titleMemoryCache.size;
 };
+
+export const getAllCachedTitles = async (limit = 200) => {
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 200, 1000));
+  if (isDbAvailable()) {
+    try {
+      const rows = await db.query(
+        "SELECT * FROM titles ORDER BY updated_at DESC LIMIT ?",
+        [safeLimit],
+      );
+      return rows.map(mapRowToTitle);
+    } catch {
+      // fallback below
+    }
+  }
+  return [...titleMemoryCache.values()].slice(0, safeLimit);
+};

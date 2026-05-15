@@ -6,9 +6,13 @@ export const searchTitles = async (req, res) => {
 };
 
 export const getTitle = async (req, res) => {
-  const data = await getTitleByIdService(req.params.id);
-  if (!data) return res.status(404).json({ success: false, data: null, message: "Title not found" });
-  res.json({ success: true, data });
+  try {
+    const data = await getTitleByIdService(req.params.id);
+    if (!data) return res.status(404).json({ success: false, data: null, message: "Title not found" });
+    res.json({ success: true, data });
+  } catch {
+    res.status(500).json({ success: false, data: null, message: "Title lookup failed" });
+  }
 };
 
 export const trendingTitles = async (req, res) => {
