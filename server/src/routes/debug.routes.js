@@ -4,6 +4,7 @@ import { getLibrarySourceStatus, listLibrary } from "../services/library.service
 import { searchAniListTitles } from "../services/anilist.service.js";
 import { getTitleCacheCount } from "../services/titleCache.service.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
+import { similarTitlesService } from "../services/titles.service.js";
 
 const r = Router();
 
@@ -67,6 +68,16 @@ r.get("/request-user", authMiddleware, async (req, res) => {
     success: true,
     userId: req.user?.id || "dev-user",
   });
+});
+
+r.get("/similar-test", async (req, res) => {
+  try {
+    const id = String(req.query.id || "").trim();
+    const data = id ? await similarTitlesService(id, 6) : [];
+    res.json({ success: true, data: Array.isArray(data) ? data : [] });
+  } catch {
+    res.status(200).json({ success: true, data: [], warning: "Similar titles unavailable" });
+  }
 });
 
 export default r;

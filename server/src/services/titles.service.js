@@ -3,6 +3,50 @@ import { searchAniListTitles } from "./anilist.service.js";
 import { getTitleById } from "./titleCache.service.js";
 
 const normalize = (v = "") => String(v).trim().toLowerCase();
+const toText = (v = "") => String(v ?? "").trim();
+const toNumber = (v, fallback = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const normalizeGenres = (value) => {
+  if (Array.isArray(value)) return value.map((g) => toText(g)).filter(Boolean);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map((g) => toText(g)).filter(Boolean);
+    } catch {
+      // fallback to comma split below
+    }
+    return trimmed
+      .split(",")
+      .map((g) => toText(g))
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const safeIncludesGenre = (baseGenres, titleGenres) => {
+  const base = normalizeGenres(baseGenres).map((g) => normalize(g));
+  if (!base.length) return false;
+  const target = normalizeGenres(titleGenres).map((g) => normalize(g));
+  if (!target.length) return false;
+  return target.some((g) => base.includes(g));
+};
+
+const normalizeTitleShape = (title = {}) => ({
+  ...title,
+  id: toText(title?.id),
+  title: toText(title?.title),
+  alt: toText(title?.alt),
+  type: toText(title?.type),
+  status: toText(title?.status),
+  total: Math.max(0, Math.floor(toNumber(title?.total, 0))),
+  rating: toNumber(title?.rating, 0),
+  genres: normalizeGenres(title?.genres),
+});
 
 const searchMockTitles = ({ q = "", type = "", status = "", genre = "", sort = "Popularity" } = {}) => {
   const nq = normalize(q);
@@ -10,9 +54,9 @@ const searchMockTitles = ({ q = "", type = "", status = "", genre = "", sort = "
   const nstatus = normalize(status);
   const ngenre = normalize(genre);
 
-  let data = mockTitles.filter((t) => {
+  let data = mockTitles.map(normalizeTitleShape).filter((t) => {
     if (!nq) return true;
-    const hay = `${t.title} ${t.alt} ${t.type} ${t.genres.join(" ")}`.toLowerCase();
+    const hay = `${t.title} ${t.alt} ${t.type} ${normalizeGenres(t.genres).join(" ")}`.toLowerCase();
     return hay.includes(nq);
   });
 
@@ -50,20 +94,37 @@ export const searchTitlesService = async ({ q = "", type = "", status = "", genr
   }
 };
 
-export const trendingTitlesService = (limit = 10) => [...mockTitles].sort((a, b) => b.popularity - a.popularity).slice(0, limit);
+export const trendingTitlesService = (limit = 10) =>
+  [...mockTitles]
+    .map(normalizeTitleShape)
+    .sort((a, b) => toNumber(b.popularity, 0) - toNumber(a.popularity, 0))
+    .slice(0, Math.max(0, Math.floor(toNumber(limit, 10))));
 
 export const getTitleByIdService = async (id) => {
-  const fromMock = mockTitles.find((t) => t.id === id) || null;
+  const normalizedId = toText(id);
+  const fromMock = mockTitles.find((t) => toText(t?.id) === normalizedId) || null;
   if (fromMock) return fromMock;
-  return getTitleById(id);
+  return getTitleById(normalizedId);
 };
 
-export const similarTitlesService = (id, limit = 6) => {
-  const base = getTitleByIdService(id);
-  if (!base) return [];
+export const similarTitlesService = async (id, limit = 6) => {
+  const normalizedId = toText(id);
+  const baseRaw = await getTitleByIdService(normalizedId);
+  if (!baseRaw) return [];
+
+  const base = normalizeTitleShape(baseRaw);
+  const baseType = normalize(base.type);
+  const baseGenres = normalizeGenres(base.genres);
+
   return mockTitles
-    .filter((t) => t.id !== id)
-    .filter((t) => t.type === base.type || t.genres.some((g) => base.genres.includes(g)))
-    .sort((a, b) => b.popularity - a.popularity)
-    .slice(0, limit);
+    .map(normalizeTitleShape)
+    .filter((t) => t.id && t.id !== normalizedId)
+    .filter((t) => {
+      const sameType = baseType && normalize(t.type) === baseType;
+      const genreMatch = safeIncludesGenre(baseGenres, t.genres);
+      if (!baseGenres.length) return Boolean(sameType);
+      return Boolean(sameType || genreMatch);
+    })
+    .sort((a, b) => toNumber(b.popularity, 0) - toNumber(a.popularity, 0))
+    .slice(0, Math.max(0, Math.floor(toNumber(limit, 6))));
 };

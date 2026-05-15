@@ -18,8 +18,12 @@ export const trendingTitles = async (req, res) => {
 };
 
 export const similarTitles = async (req, res) => {
-  const base = getTitleByIdService(req.params.id);
-  if (!base) return res.status(404).json({ success: false, data: [], message: "Title not found" });
-  const data = similarTitlesService(req.params.id, 6);
-  res.json({ success: true, data });
+  try {
+    const base = await getTitleByIdService(req.params.id);
+    if (!base) return res.status(200).json({ success: true, data: [] });
+    const data = await similarTitlesService(req.params.id, 6);
+    res.json({ success: true, data: Array.isArray(data) ? data : [] });
+  } catch {
+    res.status(200).json({ success: true, data: [], warning: "Similar titles unavailable" });
+  }
 };
